@@ -1,3 +1,61 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-body text-gray-900;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+@layer components {
+  /* Button Styles */
+  .btn-primary {
+    @apply bg-zonta-burgundy hover:bg-zonta-burgundy-dark text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg;
+  }
+  
+  .btn-secondary {
+    @apply bg-zonta-gold hover:bg-zonta-gold-dark text-zonta-burgundy font-semibold py-3 px-6 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-zonta-gold text-zonta-gold hover:bg-zonta-gold hover:text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300;
+  }
+
+  /* Card Styles */
+  .card {
+    @apply bg-white rounded-lg shadow-card hover:shadow-card-hover transition-shadow duration-300;
+  }
+  
+  .card-feature {
+    @apply bg-white rounded-lg p-8 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1;
+  }
+
+  /* Section Styles */
+  .section-padding {
+    @apply py-16 px-4 md:px-8 lg:px-16;
+  }
+  
+  .section-title {
+    @apply text-4xl md:text-5xl font-bold text-zonta-burgundy mb-4;
+  }
+  
+  .section-subtitle {
+    @apply text-xl md:text-2xl text-gray-600 mb-8;
+  }
+
+  /* Container */
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

@@ -3,7 +3,6 @@ import Scholarship from '../models/scholarship.js';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import path from 'path';
-import { error } from 'console';
 
 //filename and dirname help to get the current directory of this file
 const __filename = fileURLToPath(import.meta.url);
@@ -11,12 +10,12 @@ const __dirname = path.dirname(__filename);
 
 export const submitScholarshipApplication = async (req, res, next) => {
     try {
-        const { firstName, lastName, email, phone} = req.body;
+        const { firstName, lastName, email, phone } = req.body;
 
         // uploaded files are accessed
         const files = req.files || [];
 
-        if(files.length === 0) {
+        if (files.length === 0) {
             return res.status(400).json({
                 success: false,
                 error: 'At least one file (transcript or recommendation letter) must be uploaded.'
@@ -24,26 +23,24 @@ export const submitScholarshipApplication = async (req, res, next) => {
         }
 
         const existingApp = await Scholarship.findOne({ email: email.toLowerCase() });
-        if(existingApp) {
-            files.forEach(file => {
-                fs.unlink(file.path, (err) => {
-                   if(err) console.error('Error deleting uploaded file:', err); 
-                });
-            });
-
+        if (existingApp) {
+            // With Cloudinary, files are already uploaded
+            // You could delete them here if needed, but we'll just return error
             return res.status(400).json({
                 success: false, 
                 error: 'An application with this email already exists.'
             });
         }
 
+        // Map Cloudinary file data
         const documents = files.map(file => ({
-            originalName: file.originalName,
+            originalName: file.originalname,
             filename: file.filename,
-            path: file.path,
+            url: file.path, // Cloudinary stores URL in file.path
+            cloudinaryId: file.filename, // Public ID for deletion if needed
             size: file.size,
             mimetype: file.mimetype
-        }))
+        }));
 
         const scholarship = await Scholarship.create({
             firstName: firstName.trim(),
@@ -51,7 +48,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
             email: email.trim().toLowerCase(),
             phone: phone ? phone.trim() : null,
             documents: documents
-        })
+        });
 
         const applicationData = {
             firstName: scholarship.firstName,
@@ -60,7 +57,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
             phone: scholarship.phone
         };
 
-        //files are passed instead of documents to avoid sending internal paths
+        // Send email notification
         await sendScholarshipApplicationEmail(applicationData, files);
 
         res.status(201).json({
@@ -74,21 +71,10 @@ export const submitScholarshipApplication = async (req, res, next) => {
             }
         });
 
-        console.log(`Scholarship application submitted: ${applicationData.email} (${files.length} files uploaded)`);
+        console.log(`Scholarship application submitted: ${applicationData.email} (${files.length} files uploaded to Cloudinary)`);
     } catch (error) {
-        if(error.name === 'ValidationError') {
+        if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
-
-            //check if files were uploaded
-            if(req.files) {
-                //delete each uploaded file
-                req.files.forEach(file => {
-                    //if file exists, delete it
-                    fs.unlink(file.path, (err) => {
-                       if(err) console.error('Error deleting uploaded file:', err); 
-                    });
-                });
-            }
 
             return res.status(400).json({
                 success: false,
@@ -98,16 +84,6 @@ export const submitScholarshipApplication = async (req, res, next) => {
         }
 
         console.error('Error submitting scholarship application:', error);
-
-        //we do this again to clean up any uploaded files in case of other errors
-        if(req.files) {
-            req.files.forEach(file => {
-                fs.unlink(file.path, (err) => {
-                   if(err) console.error('Error deleting uploaded file:', err); 
-                });
-            });
-        }
-
         next(error);
     }
 };

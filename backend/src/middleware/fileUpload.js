@@ -1,29 +1,31 @@
 import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 
-//get __dirname equivalent in ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-// storage config
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        //callback to store files in uploads folder
-        cb(null, path.join(__dirname, '../uploads/scholarships'));
-    },
-    filename: (req, file, cb) => {
-        //this creates unique filenames for each upload
-        //bad suffix, need to fix but looks like: <originalname>-<timestamp>-<randomnumber>
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9); // this suffix helps avoid overwriting files
-        const ext = path.extname(file.originalname); // we need the file ext because original name may have multiple dots
-        const nameWithoutExt = path.basename(file.originalname, ext); // useful for creating a new file name
-        cb(null, `${nameWithoutExt}-${uniqueSuffix}${ext}`); // e.g., document-1632345678901-123456789.pdf
+// Cloudinary storage config
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'zonta-scholarships', // Folder name in Cloudinary
+        allowed_formats: ['pdf', 'doc', 'docx'],
+        resource_type: 'raw', // For non-image files
+        public_id: (req, file) => {
+            // Create unique filename
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const nameWithoutExt = file.originalname.replace(/\.[^/.]+$/, "");
+            return `${nameWithoutExt}-${uniqueSuffix}`;
+        }
     }
 });
 
-
-// filter restricts the types of files that can be uploaded. So only pdf, doc, docx
+// File filter - restrict file types
 const fileFilter = (req, file, cb) => {
     const allowedTypes = [
         'application/pdf',
@@ -31,43 +33,42 @@ const fileFilter = (req, file, cb) => {
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
 
-    //what mimetype does is that it checks the file header to determine the file type
-    if(allowedTypes.includes(file.mimetype)) {
-        cb(null, true); //file is accepted
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true); // Accept file
     } else {
-        cb(new Error('Invalid file type. Only PDF, DOC, and DOCX are allowed.'), false); //file is rejected
+        cb(new Error('Invalid file type. Only PDF, DOC, and DOCX are allowed.'), false);
     }
-}
+};
 
-const upload = multer(({
+const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024, // allows for 5 MB limit
-        files: 2 //allows for only 2 files per upload
+        fileSize: 5 * 1024 * 1024, // 5 MB limit
+        files: 2 // Max 2 files per upload
     }
-}))
+})
 
 
-export const uploadScholarshipDocs = upload.array('documents', 2); //name will be documents, and max 2 files
+export const uploadScholarshipDocs = upload.array('documents', 2);
 
 export const handleMulterErr = (err, req, res, next) => {
-    if(err instanceof multer.MulterError) {
-        if(err.code === 'LIMIT_FILE_SIZE') {
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({ 
                 success: false,
                 error: 'File size is too large. Max size is 5MB.'
-             });
+            });
         }
 
-        if(err.code === 'LIMIT_FILE_COUNT') {
+        if (err.code === 'LIMIT_FILE_COUNT') {
             return res.status(400).json({
                 success: false,
                 error: 'File limit reached. Max 2 files allowed.'
             });
         }
 
-        if(err.code === 'LIMIT_UNEXPCTED_FILE') {
+        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
             return res.status(400).json({
                 success: false,
                 error: 'Unexpected field name. Please use "documents" as the field name.'
@@ -80,13 +81,15 @@ export const handleMulterErr = (err, req, res, next) => {
         });
     }
 
-    //for more generic errors
-    if(err) {
+    if (err) {
         return res.status(400).json({
-            sucess: false,
+            success: false,
             error: err.message
         });
     }
 
     next();
-}
+};
+
+// Export cloudinary for use in controllers (e.g., deleting files)
+export { cloudinary };

@@ -75,7 +75,7 @@ export const getAllMembers = async (req, res, next) => {
         }
 
         // newest members first are shown
-        const members = (await Member.find(query).sort({ submittedAt: -1 })).select('-__v'); //we don't need the __v field which is version key of mongoose documents
+        const members = await Member.find(query).sort({ submittedAt: -1 }).select('-__v'); //we don't need the __v field which is version key of mongoose documents
 
         res.json({
             success: true,
