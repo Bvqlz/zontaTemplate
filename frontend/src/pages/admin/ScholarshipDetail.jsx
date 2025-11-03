@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { scholarshipAPI } from '../../utils/apiService';
 
@@ -14,11 +14,7 @@ function ScholarshipDetail() {
         notes: ''
     });
 
-    useEffect(() => {
-        fetchScholarship();
-    }, [id]);
-
-    const fetchScholarship = async () => {
+    const fetchScholarship = useCallback(async () => {
         setLoading(true);
         setError(null);
         
@@ -35,7 +31,11 @@ function ScholarshipDetail() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
+
+    useEffect(() => {
+        fetchScholarship();
+    }, [fetchScholarship]);
 
     const handleUpdate = async (e) => {
         e.preventDefault();
@@ -65,7 +65,7 @@ function ScholarshipDetail() {
     const handleDownload = async (doc) => {
         try {
             // Cloudinary URLs can be downloaded directly
-            const response = await fetch(doc.url);
+            const response = await fetch(doc.cloudinaryUrl);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');

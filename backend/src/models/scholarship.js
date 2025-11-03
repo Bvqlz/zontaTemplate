@@ -25,8 +25,8 @@ const scholarshipSchema = new mongoose.Schema({
     documents: [{
         originalName: String,
         filename: String,
-        url: String, // Cloudinary URL (instead of local path)
-        cloudinaryId: String, // For deletion if needed
+        cloudinaryUrl: String,
+        cloudinaryPublicId: String,
         size: Number,
         mimetype: String,
         uploadedAt: {

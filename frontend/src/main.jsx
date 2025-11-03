@@ -18,7 +18,6 @@ import Scholarship from "./pages/Scholarship.jsx";
 import Login from "./pages/Login.jsx";
 import NotFound from "./pages/NotFound.jsx";
 
-
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import ScholarshipManagement from "./pages/admin/ScholarshipManagement.jsx";
@@ -62,4 +61,3 @@ createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </StrictMode>
 );
-

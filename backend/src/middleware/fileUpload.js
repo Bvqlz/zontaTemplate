@@ -1,31 +1,22 @@
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from '../config/cloudinary.js';
 
-// Configure Cloudinary
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// Cloudinary storage config
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'zonta-scholarships', // Folder name in Cloudinary
+        folder: 'zonta-scholarships',
         allowed_formats: ['pdf', 'doc', 'docx'],
-        resource_type: 'raw', // For non-image files
+        resource_type: 'raw', //allows for non image files
         public_id: (req, file) => {
-            // Create unique filename
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            const nameWithoutExt = file.originalname.replace(/\.[^/.]+$/, "");
-            return `${nameWithoutExt}-${uniqueSuffix}`;
+            const timestamp = Date.now();
+            const originalName = file.originalname.replace(/\.[^/.]+$/, ''); //removes file extension
+            return `${originalName}-${timestamp}`;
         }
     }
-});
+})
 
-// File filter - restrict file types
+// filter restricts the types of files that can be uploaded. So only pdf, doc, docx
 const fileFilter = (req, file, cb) => {
     const allowedTypes = [
         'application/pdf',

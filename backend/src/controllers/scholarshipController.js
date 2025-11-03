@@ -1,12 +1,6 @@
 import { sendScholarshipApplicationEmail } from '../utils/emailService.js';
 import Scholarship from '../models/scholarship.js';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-import path from 'path';
-
-//filename and dirname help to get the current directory of this file
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import cloudinary from '../config/cloudinary.js';
 
 export const submitScholarshipApplication = async (req, res, next) => {
     try {
@@ -24,8 +18,6 @@ export const submitScholarshipApplication = async (req, res, next) => {
 
         const existingApp = await Scholarship.findOne({ email: email.toLowerCase() });
         if (existingApp) {
-            // With Cloudinary, files are already uploaded
-            // You could delete them here if needed, but we'll just return error
             return res.status(400).json({
                 success: false, 
                 error: 'An application with this email already exists.'
@@ -36,8 +28,8 @@ export const submitScholarshipApplication = async (req, res, next) => {
         const documents = files.map(file => ({
             originalName: file.originalname,
             filename: file.filename,
-            url: file.path, // Cloudinary stores URL in file.path
-            cloudinaryId: file.filename, // Public ID for deletion if needed
+            cloudinaryUrl: file.path,
+            cloudinaryPublicId: file.filename,
             size: file.size,
             mimetype: file.mimetype
         }));
@@ -67,6 +59,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
                 id: scholarship._id,
                 applicantName: scholarship.fullName,
                 applicantEmail: scholarship.email,
+                documentsUploaded: files.length,
                 submittedAt: scholarship.submittedAt
             }
         });
@@ -75,6 +68,13 @@ export const submitScholarshipApplication = async (req, res, next) => {
     } catch (error) {
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
+
+            if(req.files) {
+                for(const file of req.files) {
+                    // remember that req.files is an array so we loop through each file and delete from cloudinary
+                    await cloudinary.uploader.destroy(file.filename, { resource_type: 'raw' });
+                }
+            }
 
             return res.status(400).json({
                 success: false,
@@ -168,6 +168,43 @@ export const updateScholarship = async (req, res, next) => {
     }
 }
 
+export const deleteScholarship = async (req, res, next) => {
+    try {
+        const scholarship = await Scholarship.findById(req.params.id);
+
+        if(!scholarship) {
+            return res.status(404).json({
+                success: false,
+                error: 'Scholarship application not found'
+            });
+        }
+
+        for(const doc of scholarship.documents) {
+            try {
+                await cloudinary.uploader.destroy(doc.cloudinaryPublicId, { resource_type: 'raw' });
+                console.log(`Deleted document from Cloudinary: ${doc.originalName}`);
+            } catch(error) {
+                console.error(`Error deleting document from Cloudinary: ${doc.originalName}`, error);
+            }
+
+        }
+
+        await scholarship.deleteOne();
+
+        res.json({
+            success: true,
+            message: 'Scholarship application deleted successfully'
+        })
+
+        console.log(`Scholarship application deleted: ${scholarship.email}`);
+    } catch(error) {
+        console.error('Error deleting scholarship application:', error);
+        next(error);
+    }
+}
+
+
+
 export const downloadScholarshipForm = (req, res) => {
     try {
         const filePath = path.join(__dirname, '../forms/test-form.pdf');
@@ -204,6 +241,7 @@ export const testScholarshipEndpoint = (req, res) => {
     res.json({
         success: true,
         message: 'Scholarship API is working!',
+        storage: 'Cloudinary',
         instructions: {
             step1: 'Download the scholarship application form',
             step2: 'Fill out the form completely',
