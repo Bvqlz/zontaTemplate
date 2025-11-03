@@ -1,14 +1,15 @@
 import { sendScholarshipApplicationEmail } from '../utils/emailService.js';
 import Scholarship from '../models/scholarship.js';
+import cloudinary from '../config/cloudinary.js';
 
 export const submitScholarshipApplication = async (req, res, next) => {
     try {
-        const { firstName, lastName, email, phone} = req.body;
+        const { firstName, lastName, email, phone } = req.body;
 
         // uploaded files are accessed
         const files = req.files || [];
 
-        if(files.length === 0) {
+        if (files.length === 0) {
             return res.status(400).json({
                 success: false,
                 error: 'At least one file (transcript or recommendation letter) must be uploaded.'
@@ -16,13 +17,14 @@ export const submitScholarshipApplication = async (req, res, next) => {
         }
 
         const existingApp = await Scholarship.findOne({ email: email.toLowerCase() });
-        if(existingApp) {
+        if (existingApp) {
             return res.status(400).json({
                 success: false, 
                 error: 'An application with this email already exists.'
             });
         }
 
+        // Map Cloudinary file data
         const documents = files.map(file => ({
             originalName: file.originalname,
             filename: file.filename,
@@ -30,7 +32,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
             cloudinaryPublicId: file.filename,
             size: file.size,
             mimetype: file.mimetype
-        }))
+        }));
 
         const scholarship = await Scholarship.create({
             firstName: firstName.trim(),
@@ -38,7 +40,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
             email: email.trim().toLowerCase(),
             phone: phone ? phone.trim() : null,
             documents: documents
-        })
+        });
 
         const applicationData = {
             firstName: scholarship.firstName,
@@ -47,7 +49,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
             phone: scholarship.phone
         };
 
-        //files are passed instead of documents to avoid sending internal paths
+        // Send email notification
         await sendScholarshipApplicationEmail(applicationData, files);
 
         res.status(201).json({
@@ -62,16 +64,15 @@ export const submitScholarshipApplication = async (req, res, next) => {
             }
         });
 
-        console.log(`Scholarship application submitted: ${applicationData.email} (${files.length} files uploaded)`);
+        console.log(`Scholarship application submitted: ${applicationData.email} (${files.length} files uploaded to Cloudinary)`);
     } catch (error) {
-        if(error.name === 'ValidationError') {
+        if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
 
             if(req.files) {
-
                 for(const file of req.files) {
                     // remember that req.files is an array so we loop through each file and delete from cloudinary
-                    await cloudinary.uploader.destroy(file.cloudinaryPublicId, { resource_type: 'raw' });
+                    await cloudinary.uploader.destroy(file.filename, { resource_type: 'raw' });
                 }
             }
 

@@ -1,61 +1,63 @@
-import jwt from 'jsonwebtoken';
-import { comparePass } from '../utils/hashPassword.js';
+import User from '../models/user.js';
 
-export const login = async (req, res) => {
+export const login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
         //if they miss email or password
         if(!email || !password) {
-            return res.status(400).json({ error: 'email and password are required' }); //400 means bad request
+            return res.status(400).json({ success: false, error: 'email and password are required' }); //400 means bad request
         }
 
-        const adminEmail = process.env.ADMIN_EMAIL;
-        const adminPassHash = process.env.ADMIN_PASSWORD_HASH;
+        // Find user and explicitly include password field
+        const user = await User.findOne({ email: email.toLowerCase() })
+            .select('+password');
 
-        if(!adminEmail || !adminPassHash) {
-            console.error("Admin email or pass hash missing in env");
-            return res.status(500).json({ error: 'server config error' }); //code of 500 means server error
-        }
-
-        if(email.toLowerCase() !== adminEmail.toLowerCase()) {
+        if (!user) {
             return res.status(401).json({ 
                 success: false,
-                error: 'Invalid email'
-             }); //401 means unauthorized
+                error: 'Invalid credentials' // Generic message for security
+            });
         }
-
-        if(!(await comparePass(password, adminPassHash))) {
+       
+        // Check if user is active
+        if (!user.isActive) {
             return res.status(401).json({
                 success: false,
-                error: 'Invalid password'
+                error: 'Account is disabled'
             });
         }
 
-        const token = jwt.sign(
-            {
-                id: 'admin_1',
-                email: adminEmail,
-                role: 'admin'
-            }, 
+        // Compare password
+        const isPasswordMatch = await user.comparePassword(password);
+        
+        if (!isPasswordMatch) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid credentials'
+            });
+        }
 
-            process.env.JWT_SECRET,
+        // Update last login
+        user.lastLogin = new Date();
+        await user.save();
 
-            { 
-                expiresIn: process.env.JWT_EXPIRE 
-            }
-        )
+        // Generate token
+        const token = user.generateAuthToken();
 
-        console.log(`logged in successfully: ${email}`);
+        console.log(`User logged in successfully: ${email}`);
 
         res.json({
             success: true,
             message: 'Login successful',
             data: {
-                token, 
+                token,
                 admin: {
-                    email: adminEmail,
-                    role: 'admin'
+                    id: user._id,
+                    email: user.email,
+                    role: user.role,
+                    firstName: user.firstName,
+                    lastName: user.lastName
                 },
                 expiresIn: process.env.JWT_EXPIRE
             }
