@@ -4,6 +4,8 @@ import memberRoutes from './src/routes/members.js';
 import eventRoutes from './src/routes/events.js';
 import scholarshipRoutes from './src/routes/scholarships.js';
 import authRoutes from './src/routes/auth.js';
+import donationRoutes, { handleWebhook } from './src/routes/donations.js';
+import productRoutes, { handleProductWebhook } from './src/routes/products.js';
 import { connectDB } from './src/config/database.js';
 
 connectDB();
@@ -15,6 +17,12 @@ const corsOptions = {
 }
 
 app.use(cors());
+
+// Stripe webhooks need raw body
+app.post('/api/donations/webhook', express.raw({ type: 'application/json' }), handleWebhook);
+app.post('/api/products/webhook', express.raw({ type: 'application/json' }), handleProductWebhook);
+
+// JSON parsing for all other routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -53,6 +61,10 @@ app.use('/api/events', eventRoutes);
 app.use('/api/scholarship', scholarshipRoutes);
 
 app.use('/api/auth', authRoutes);
+
+app.use('/api/donations', donationRoutes);
+
+app.use('/api/products', productRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ 

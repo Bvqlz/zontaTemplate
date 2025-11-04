@@ -61,6 +61,11 @@ export default function Navbar() {
                 CONTACT
               </Link>
             </li>
+            <li>
+              <Link to="/shop" className="hover:text-zonta-gold transition-colors duration-300">
+                SHOP
+              </Link>
+            </li>
           </ul>
 
           {/* CTA Buttons - Desktop */}
@@ -81,7 +86,7 @@ export default function Navbar() {
             </div>
 
             <a 
-              href="#donate"
+              href="/donate"
               className="bg-zonta-gold hover:bg-zonta-gold-dark text-zonta-burgundy px-6 py-2.5 rounded-lg font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300"
             >
               DONATE
@@ -180,14 +185,23 @@ export default function Navbar() {
                   CONTACT
                 </Link>
               </li>
+              <li>
+                <Link 
+                  to="/shop" 
+                  className="block py-2 text-zonta-burgundy hover:text-zonta-gold font-semibold transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  SHOP
+                </Link>
+              </li>
               <li className="pt-4 border-t border-gray-200">
-                <a 
-                  href="#donate"
+                <Link 
+                  to="/donate"
                   className="inline-block bg-zonta-gold hover:bg-zonta-gold-dark text-zonta-burgundy px-8 py-3 rounded-lg font-bold shadow-md"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   DONATE
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

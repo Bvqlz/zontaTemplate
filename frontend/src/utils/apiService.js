@@ -111,4 +111,6 @@ export const authAPI = {
     }
 };
 
-
+// Default export for convenience
+const apiService = api;
+export default apiService;
