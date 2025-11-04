@@ -20,6 +20,11 @@ import NotFound from "./pages/NotFound.jsx";
 import FAQ from "./pages/FAQ.jsx";
 import Impacts from "./pages/Impacts.jsx";
 import Advocacy from "./pages/Advocacy.jsx";
+import Donate from "./pages/Donate.jsx";
+import DonateSuccess from "./pages/DonateSuccess.jsx";
+import Shop from "./pages/Shop.jsx";
+import ProductCheckout from "./pages/ProductCheckout.jsx";
+import ShopSuccess from "./pages/ShopSuccess.jsx";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
@@ -30,6 +35,9 @@ import EventCreate from "./pages/admin/EventCreate.jsx";
 import EventEdit from "./pages/admin/EventEdit.jsx";
 import MemberManagement from "./pages/admin/MemberManagement.jsx";
 import MemberDetail from "./pages/admin/MemberDetail.jsx";
+import DonationManagement from "./pages/admin/DonationManagement.jsx";
+import ProductManagement from "./pages/admin/ProductManagement.jsx";
+import ProductForm from "./pages/admin/ProductForm.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -45,6 +53,11 @@ createRoot(document.getElementById("root")).render(
           <Route path="/faq" element={<FAQ />} />
           <Route path="/impacts" element={<Impacts />} />
           <Route path="/advocacy" element={<Advocacy />} />
+          <Route path="/donate" element={<Donate />} />
+          <Route path="/donate/success" element={<DonateSuccess />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/shop/checkout/:id" element={<ProductCheckout />} />
+          <Route path="/shop/success" element={<ShopSuccess />} />
         </Route>
 
         {/* Hidden Admin Login - no navbar/footer */}
@@ -60,6 +73,10 @@ createRoot(document.getElementById("root")).render(
           <Route path="/admin/events/edit/:id" element={<EventEdit />} />
           <Route path="/admin/members" element={<MemberManagement />} />
           <Route path="/admin/members/:id" element={<MemberDetail />} />
+          <Route path="/admin/donations" element={<DonationManagement />} />
+          <Route path="/admin/products" element={<ProductManagement />} />
+          <Route path="/admin/products/create" element={<ProductForm />} />
+          <Route path="/admin/products/edit/:id" element={<ProductForm />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />
