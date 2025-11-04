@@ -1,7 +1,7 @@
 // src/components/Navbar.jsx
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import zontaLogo from "../../assets/zontaNaplesLogo.jpg";
+import zontaLogo from "../../assets/zontaLogo.jpg";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,8 +27,23 @@ export default function Navbar() {
               </Link>
             </li>
             <li>
+              <Link to="/advocacy" className="hover:text-zonta-gold transition-colors duration-300">
+                ADVOCACY
+              </Link>
+            </li>
+            <li>
+              <Link to="/impacts" className="hover:text-zonta-gold transition-colors duration-300">
+                IMPACTS
+              </Link>
+            </li>
+            <li>
               <Link to="/events" className="hover:text-zonta-gold transition-colors duration-300">
                 EVENTS
+              </Link>
+            </li>
+            <li>
+              <Link to="/scholarship" className="hover:text-zonta-gold transition-colors duration-300">
+                SCHOLARSHIP
               </Link>
             </li>
             <li>
@@ -37,8 +52,8 @@ export default function Navbar() {
               </Link>
             </li>
             <li>
-              <Link to="/scholarship" className="hover:text-zonta-gold transition-colors duration-300">
-                SCHOLARSHIP
+              <Link to="/faq" className="hover:text-zonta-gold transition-colors duration-300">
+                FAQ
               </Link>
             </li>
             <li>
@@ -109,6 +124,33 @@ export default function Navbar() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   EVENTS
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/impacts" 
+                  className="block py-2 text-zonta-burgundy hover:text-zonta-gold font-semibold transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  IMPACTS
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/faq" 
+                  className="block py-2 text-zonta-burgundy hover:text-zonta-gold font-semibold transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  FAQ
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/advocacy" 
+                  className="block py-2 text-zonta-burgundy hover:text-zonta-gold font-semibold transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  ADVOCACY
                 </Link>
               </li>
               <li>

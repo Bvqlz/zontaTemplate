@@ -17,6 +17,9 @@ import EventsPage from "./pages/Events.jsx";
 import Scholarship from "./pages/Scholarship.jsx";
 import Login from "./pages/Login.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import FAQ from "./pages/FAQ.jsx";
+import Impacts from "./pages/Impacts.jsx";
+import Advocacy from "./pages/Advocacy.jsx";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
@@ -39,6 +42,9 @@ createRoot(document.getElementById("root")).render(
           <Route path="/join" element={<Join />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/scholarship" element={<Scholarship />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/impacts" element={<Impacts />} />
+          <Route path="/advocacy" element={<Advocacy />} />
         </Route>
 
         {/* Hidden Admin Login - no navbar/footer */}
