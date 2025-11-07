@@ -8,13 +8,12 @@ function DonationManagement() {
     
     // Filters
     const [statusFilter, setStatusFilter] = useState('');
-    const [purposeFilter, setPurposeFilter] = useState('');
     const [dateFilter, setDateFilter] = useState('all');
 
     useEffect(() => {
         fetchDonations();
         fetchStatistics();
-    }, [statusFilter, purposeFilter, dateFilter]);
+    }, [statusFilter, dateFilter]);
 
     const fetchDonations = async () => {
         setLoading(true);
@@ -25,7 +24,6 @@ function DonationManagement() {
             const params = new URLSearchParams();
             
             if (statusFilter) params.append('status', statusFilter);
-            if (purposeFilter) params.append('purpose', purposeFilter);
             
             // Date filtering
             if (dateFilter !== 'all') {
@@ -96,7 +94,6 @@ function DonationManagement() {
             const params = new URLSearchParams();
             
             if (statusFilter) params.append('status', statusFilter);
-            if (purposeFilter) params.append('purpose', purposeFilter);
 
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/donations/export?${params.toString()}`,
@@ -228,27 +225,6 @@ function DonationManagement() {
                             {statistics.last30Days.count} donations
                         </p>
                     </div>
-
-                    <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-sm font-semibold text-gray-600">Top Purpose</h3>
-                            <svg className="w-8 h-8 text-blue-500 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                            </svg>
-                        </div>
-                        {statistics.byPurpose.length > 0 ? (
-                            <>
-                                <p className="text-xl font-bold text-blue-600">
-                                    {statistics.byPurpose[0]._id}
-                                </p>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    ${statistics.byPurpose[0].totalAmount.toFixed(2)}
-                                </p>
-                            </>
-                        ) : (
-                            <p className="text-gray-500">No data</p>
-                        )}
-                    </div>
                 </div>
             )}
 
@@ -270,23 +246,6 @@ function DonationManagement() {
                             <option value="pending">Pending</option>
                             <option value="failed">Failed</option>
                             <option value="refunded">Refunded</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Purpose
-                        </label>
-                        <select
-                            value={purposeFilter}
-                            onChange={(e) => setPurposeFilter(e.target.value)}
-                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-zonta-burgundy"
-                        >
-                            <option value="">All Purposes</option>
-                            <option value="General Fund">General Fund</option>
-                            <option value="Scholarships">Scholarships</option>
-                            <option value="Community Programs">Community Programs</option>
-                            <option value="Advocacy">Advocacy</option>
-                            <option value="Other">Other</option>
                         </select>
                     </div>
                     <div>
@@ -331,11 +290,10 @@ function DonationManagement() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p className="text-gray-500 text-lg">No donations found</p>
-                    {(statusFilter || purposeFilter || dateFilter !== 'all') && (
+                    {(statusFilter || dateFilter !== 'all') && (
                         <button
                             onClick={() => {
                                 setStatusFilter('');
-                                setPurposeFilter('');
                                 setDateFilter('all');
                             }}
                             className="mt-4 text-zonta-burgundy hover:text-zonta-burgundy-dark font-semibold"
@@ -377,25 +335,17 @@ function DonationManagement() {
                                             {formatDate(donation.createdAt)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {donation.isAnonymous ? 'Anonymous' : donation.donorName}
-                                            </div>
                                             {donation.donorPhone && (
                                                 <div className="text-sm text-gray-500">{donation.donorPhone}</div>
                                             )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {donation.isAnonymous ? '—' : donation.donorEmail}
+                                            {donation.donorEmail}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-lg font-bold text-zonta-burgundy">
                                                 ${donation.amount.toFixed(2)}
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {donation.purpose === 'Other' && donation.customPurpose
-                                                ? donation.customPurpose
-                                                : donation.purpose}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             {getStatusBadge(donation.status)}

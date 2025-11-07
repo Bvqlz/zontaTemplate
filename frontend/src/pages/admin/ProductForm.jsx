@@ -10,20 +10,20 @@ const ProductForm = () => {
     const [loading, setLoading] = useState(isEdit);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState('');
 
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         shortDescription: '',
         price: '',
-        compareAtPrice: '',
         inventory: 0,
         trackInventory: true,
         allowBackorder: false,
         sku: '',
         category: 'Other',
         tags: '',
-        featuredImage: '',
         status: 'draft',
         featured: false,
         weight: '',
@@ -38,10 +38,29 @@ const ProductForm = () => {
             if (response.data.success) {
                 const product = response.data.data;
                 setFormData({
-                    ...product,
+                    name: product.name || '',
+                    description: product.description || '',
+                    shortDescription: product.shortDescription || '',
+                    price: product.price || '',
+                    inventory: product.inventory || 0,
+                    trackInventory: product.trackInventory !== undefined ? product.trackInventory : true,
+                    allowBackorder: product.allowBackorder || false,
+                    sku: product.sku || '',
+                    category: product.category || 'Other',
                     tags: product.tags ? product.tags.join(', ') : '',
-                    featuredImage: product.featuredImage || ''
+                    status: product.status || 'draft',
+                    featured: product.featured || false,
+                    weight: product.weight || '',
+                    weightUnit: product.weightUnit || 'lb',
+                    requiresShipping: product.requiresShipping !== undefined ? product.requiresShipping : true
                 });
+                
+                // Set existing image preview
+                if (product.featuredImage) {
+                    setImagePreview(product.featuredImage);
+                } else if (product.images && product.images.length > 0) {
+                    setImagePreview(product.images[0].url);
+                }
             }
         } catch (err) {
             setError('Failed to load product');
@@ -65,27 +84,96 @@ const ProductForm = () => {
         }));
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        
+        if (!file) return;
+        
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            setError('Invalid file type. Only JPG, PNG, and WEBP images are allowed.');
+            return;
+        }
+        
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            setError('Image file must be less than 5MB.');
+            return;
+        }
+        
+        setImageFile(file);
+        setError('');
+        
+        // Create preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleRemoveImage = () => {
+        setImageFile(null);
+        setImagePreview('');
+        
+        // Reset file input
+        const fileInput = document.getElementById('product-image');
+        if (fileInput) fileInput.value = '';
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setSaving(true);
 
         try {
-            // Prepare data
-            const submitData = {
-                ...formData,
-                price: parseFloat(formData.price),
-                compareAtPrice: formData.compareAtPrice ? parseFloat(formData.compareAtPrice) : undefined,
-                inventory: parseInt(formData.inventory) || 0,
-                weight: formData.weight ? parseFloat(formData.weight) : undefined,
-                tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(t => t) : []
-            };
+            // Prepare FormData for multipart/form-data submission
+            const submitData = new FormData();
+            
+            // Append all form fields
+            submitData.append('name', formData.name);
+            submitData.append('description', formData.description);
+            submitData.append('shortDescription', formData.shortDescription);
+            submitData.append('price', parseFloat(formData.price));
+            submitData.append('inventory', parseInt(formData.inventory) || 0);
+            submitData.append('trackInventory', formData.trackInventory);
+            submitData.append('allowBackorder', formData.allowBackorder);
+            submitData.append('sku', formData.sku);
+            submitData.append('category', formData.category);
+            submitData.append('status', formData.status);
+            submitData.append('featured', formData.featured);
+            submitData.append('requiresShipping', formData.requiresShipping);
+            submitData.append('weightUnit', formData.weightUnit);
+            
+            if (formData.weight) {
+                submitData.append('weight', parseFloat(formData.weight));
+            }
+            
+            // Handle tags
+            if (formData.tags) {
+                const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(t => t);
+                tagsArray.forEach(tag => submitData.append('tags[]', tag));
+            }
+            
+            // Append image file if present
+            if (imageFile) {
+                submitData.append('image', imageFile);
+            }
 
             let response;
             if (isEdit) {
-                response = await apiService.put(`/api/products/admin/${id}`, submitData);
+                response = await apiService.put(`/api/products/admin/${id}`, submitData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
             } else {
-                response = await apiService.post('/api/products/admin', submitData);
+                response = await apiService.post('/api/products/admin', submitData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
             }
 
             if (response.data.success) {
@@ -179,17 +267,54 @@ const ProductForm = () => {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Featured Image URL
+                                Product Image
                             </label>
-                            <input
-                                type="url"
-                                name="featuredImage"
-                                value={formData.featuredImage}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy focus:border-transparent"
-                                placeholder="https://example.com/image.jpg"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Upload images to Cloudinary and paste the URL here</p>
+                            
+                            {/* Image Preview */}
+                            {imagePreview && (
+                                <div className="mb-4 relative">
+                                    <img
+                                        src={imagePreview}
+                                        alt="Product preview"
+                                        className="w-full max-w-md h-64 object-cover rounded-lg border-2 border-gray-300"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleRemoveImage}
+                                        className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-colors"
+                                        title="Remove image"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {/* File Upload Input */}
+                            <div className="flex items-center justify-center w-full">
+                                <label htmlFor="product-image" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <svg className="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <p className="mb-2 text-sm text-gray-500">
+                                            <span className="font-semibold">Click to upload</span> or drag and drop
+                                        </p>
+                                        <p className="text-xs text-gray-500">JPG, PNG, or WEBP (Max 5MB)</p>
+                                    </div>
+                                    <input
+                                        id="product-image"
+                                        type="file"
+                                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                                        onChange={handleImageChange}
+                                        className="hidden"
+                                    />
+                                </label>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                                {imageFile ? `Selected: ${imageFile.name}` : 'Upload a product image to display in the shop'}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -198,40 +323,21 @@ const ProductForm = () => {
                 <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">Pricing</h2>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Price * ($)
-                            </label>
-                            <input
-                                type="number"
-                                name="price"
-                                value={formData.price}
-                                onChange={handleChange}
-                                required
-                                min="0"
-                                step="0.01"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy focus:border-transparent"
-                                placeholder="0.00"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Compare at Price ($)
-                            </label>
-                            <input
-                                type="number"
-                                name="compareAtPrice"
-                                value={formData.compareAtPrice}
-                                onChange={handleChange}
-                                min="0"
-                                step="0.01"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy focus:border-transparent"
-                                placeholder="0.00"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Original price (for showing discounts)</p>
-                        </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Price * ($)
+                        </label>
+                        <input
+                            type="number"
+                            name="price"
+                            value={formData.price}
+                            onChange={handleChange}
+                            required
+                            min="0"
+                            step="0.01"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy focus:border-transparent"
+                            placeholder="0.00"
+                        />
                     </div>
                 </div>
 
@@ -304,42 +410,25 @@ const ProductForm = () => {
                 <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">Organization</h2>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Category *
-                            </label>
-                            <select
-                                name="category"
-                                value={formData.category}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy focus:border-transparent"
-                            >
-                                <option value="Apparel">Apparel</option>
-                                <option value="Accessories">Accessories</option>
-                                <option value="Books">Books</option>
-                                <option value="Home & Garden">Home & Garden</option>
-                                <option value="Jewelry">Jewelry</option>
-                                <option value="Art">Art</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Tags
-                            </label>
-                            <input
-                                type="text"
-                                name="tags"
-                                value={formData.tags}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy focus:border-transparent"
-                                placeholder="women, empowerment, charity"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Separate tags with commas</p>
-                        </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Category *
+                        </label>
+                        <select
+                            name="category"
+                            value={formData.category}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy focus:border-transparent"
+                        >
+                            <option value="Apparel">Apparel</option>
+                            <option value="Accessories">Accessories</option>
+                            <option value="Books">Books</option>
+                            <option value="Home & Garden">Home & Garden</option>
+                            <option value="Jewelry">Jewelry</option>
+                            <option value="Art">Art</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
                 </div>
 
@@ -419,19 +508,6 @@ const ProductForm = () => {
                                 <option value="active">Active</option>
                                 <option value="archived">Archived</option>
                             </select>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                name="featured"
-                                checked={formData.featured}
-                                onChange={handleChange}
-                                className="h-4 w-4 text-burgundy focus:ring-burgundy border-gray-300 rounded"
-                            />
-                            <label className="text-sm font-medium text-gray-700">
-                                Feature this product (show on homepage)
-                            </label>
                         </div>
                     </div>
                 </div>

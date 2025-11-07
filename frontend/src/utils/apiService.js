@@ -1,6 +1,13 @@
 import api from '../config/api.js';
 
+// remember that api is an axios instance with interceptors.
+// how this works is that we use a http type along with the path to make requests to the backend api. 
+// all of these paths match the routes defined in the backend.
+
+// the donation and product api services are not here. Possible migration to here.
+
 export const memberAPI = {
+    //membership application
     submitApplication: async (data) => {
         const response = await api.post('/api/members/apply', data);
         return response.data;

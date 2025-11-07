@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { eventAPI } from '../utils/apiService';
 
+// this events page would be an example of using the eventAPI to get events from the backend
+
 function EventsList() {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -130,6 +132,7 @@ function EventsList() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {/*this is where the response from the backend is used to map through the events */}
                     {events.map(event => (
                         <div 
                             key={event._id} 

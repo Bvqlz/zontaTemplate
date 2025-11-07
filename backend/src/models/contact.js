@@ -46,3 +46,5 @@ contactSchema.index({ submittedAt: -1 });
 const Contact = mongoose.model('Contact', contactSchema);
 
 export default Contact;
+
+// status is an attribute that i dont think is necessary

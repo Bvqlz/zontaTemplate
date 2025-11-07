@@ -3,15 +3,15 @@ import Donation from '../models/donation.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Create Stripe Checkout Session
+// uses the Stripe SDK to create a checkout session
 export const createCheckoutSession = async (req, res) => {
     try {
-        const { amount, donorName, donorEmail, donorPhone, purpose, customPurpose, message, isAnonymous, isRecurring, frequency } = req.body;
+        const { amount, donorName, donorEmail, donorPhone,message, isRecurring, frequency } = req.body;
 
         // Validate required fields
-        if (!amount || !donorName || !donorEmail || !purpose) {
+        if (!amount || !donorName || !donorEmail) {
             return res.status(400).json({ 
-                error: 'Missing required fields: amount, donorName, donorEmail, purpose' 
+                error: 'Missing required fields: amount, donorName, donorEmail' 
             });
         }
 
@@ -21,24 +21,32 @@ export const createCheckoutSession = async (req, res) => {
         }
 
         // Create donation record in database (status: pending)
+        // need to see how to update the donation status later via webhook
+        // remove purpose, customPurpose, isAnonymous from donation schema
+
+        // keep in mind that this record is created before the payment is completed
+        // might have to do something where we delete donations that are never completed after a certain time period
         const donation = await Donation.create({
             donorName,
             donorEmail,
             donorPhone,
             amount,
-            purpose,
-            customPurpose,
             message,
-            isAnonymous,
             isRecurring: isRecurring || false,
             frequency: frequency || 'one-time',
             status: 'pending'
         });
 
-        // Determine the purpose name for Stripe
+        // Determine the purpose name for Stripe. we would just change this to be something like donation 
         const purposeName = purpose === 'Other' && customPurpose ? customPurpose : purpose;
 
-        // Create Stripe Checkout Session
+        // Create Stripe Checkout Session from stripes premade checkout flow
+        // success_url will redirect to frontend with session id to fetch a donation status which will show a success page.
+        // cancel_url will redirect back to the donate page if they cancel
+        // what metadata is used for is to store extra info to identify the donation later in the webhook
+        // stripe would handle the email receipt once payment is successful
+        // we store the session id as a part of a donation record which is added to our table
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
@@ -46,8 +54,8 @@ export const createCheckoutSession = async (req, res) => {
                     price_data: {
                         currency: 'usd',
                         product_data: {
-                            name: `Donation - ${purposeName}`,
-                            description: message || `Support Zonta Club of Naples - ${purposeName}`,
+                            name: `Donation`,
+                            description: message || `Support Zonta Club of Naples`,
                         },
                         unit_amount: Math.round(amount * 100), // Convert to cents
                     },
@@ -89,25 +97,30 @@ export const createCheckoutSession = async (req, res) => {
 };
 
 // Stripe Webhook Handler
-export const handleWebhook = async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+// what a webhook is, is a way for stripe to notify our server about events that happen in our stripe account
+// helpful since we dont have to continuously poll stripe to check for payment status
+// think of it like an event driven api 
 
-    let event;
+export const handleWebhook = async (req, res) => {
+    const sig = req.headers['stripe-signature']; // a stripe signature header sent by stripe to verify the webhook
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET; // uses our webhook secret to verify the webhook
+
+    let event; // an event can be anything from a successful payment to a failed payment
 
     try {
         // Verify webhook signature
+        // we construct the event using the stripe sdk method constructEvent
         event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (err) {
         console.error('Webhook signature verification failed:', err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // Handle the event
+    // Handle the event by using a switch case for different event types
     try {
         switch (event.type) {
             case 'checkout.session.completed':
-                const session = event.data.object;
+                const session = event.data.object; // thios event data object contains all the info about the completed checkout session
                 
                 // Find donation by session ID
                 const donation = await Donation.findOne({ stripeSessionId: session.id });
@@ -136,6 +149,20 @@ export const handleWebhook = async (req, res) => {
                 }
                 break;
 
+            case 'checkout.session.expired':
+                // Handle abandoned checkout sessions
+                const expiredSession = event.data.object;
+                const expiredDonation = await Donation.findOne({ 
+                    stripeSessionId: expiredSession.id 
+                });
+                
+                if (expiredDonation && expiredDonation.status === 'pending') {
+                    expiredDonation.status = 'failed';
+                    await expiredDonation.save();
+                    console.log(`Donation ${expiredDonation._id} marked as failed (session expired)`);
+                }
+                break;
+
             default:
                 console.log(`Unhandled event type: ${event.type}`);
         }
@@ -147,38 +174,40 @@ export const handleWebhook = async (req, res) => {
     }
 };
 
-// Get all donations (Admin)
+// Get all donations call for admin with filtering, pagination, and statistics
 export const getAllDonations = async (req, res) => {
     try {
-        const { status, purpose, startDate, endDate, page = 1, limit = 50 } = req.query;
+        const { status, startDate, endDate, page = 1, limit = 50 } = req.query;
         
         // Build query
         const query = {};
         
+        // all of these attributes build our query
+
         if (status) {
             query.status = status;
         }
         
-        if (purpose) {
-            query.purpose = purpose;
-        }
-        
+        // this creates a date range filter
         if (startDate || endDate) {
             query.createdAt = {};
             if (startDate) query.createdAt.$gte = new Date(startDate);
             if (endDate) query.createdAt.$lte = new Date(endDate);
         }
 
-        // Execute query with pagination
+        // Execute query with pagination (we just limit the results and skip based on page number)
         const donations = await Donation.find(query)
             .sort({ createdAt: -1 })
             .limit(limit * 1)
             .skip((page - 1) * limit)
             .lean();
 
-        const count = await Donation.countDocuments(query);
+        const count = await Donation.countDocuments(query); // total count for pagination
 
         // Calculate statistics
+        // defaults status to completed donations only
+        // this just looks through the entire table to find completed donations
+        // this is the info used on the donation management page
         const stats = await Donation.aggregate([
             { $match: { status: 'completed' } },
             {
@@ -191,6 +220,7 @@ export const getAllDonations = async (req, res) => {
             }
         ]);
 
+        // returns the donations along with pagination info and statistics
         res.json({
             donations,
             totalPages: Math.ceil(count / limit),
@@ -208,11 +238,12 @@ export const getAllDonations = async (req, res) => {
     }
 };
 
-// Get single donation by ID
+// Get single donation by ID. we currently have no use for this
 export const getDonationById = async (req, res) => {
     try {
         const { id } = req.params;
         
+        //look at the schema for donation model to see what attributes are available
         const donation = await Donation.findById(id);
         
         if (!donation) {
@@ -253,6 +284,7 @@ export const getDonationBySessionId = async (req, res) => {
 };
 
 // Get donation statistics
+// why do we have two stats endpoints? one in the getAllDonations function and another here?
 export const getDonationStats = async (req, res) => {
     try {
         // Total donations
@@ -268,18 +300,6 @@ export const getDonationStats = async (req, res) => {
             }
         ]);
 
-        // Donations by purpose
-        const byPurpose = await Donation.aggregate([
-            { $match: { status: 'completed' } },
-            {
-                $group: {
-                    _id: '$purpose',
-                    totalAmount: { $sum: '$amount' },
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { totalAmount: -1 } }
-        ]);
 
         // Recent donations (last 30 days)
         const thirtyDaysAgo = new Date();
@@ -303,7 +323,6 @@ export const getDonationStats = async (req, res) => {
 
         res.json({
             total: totalStats[0] || { totalAmount: 0, count: 0, averageAmount: 0 },
-            byPurpose,
             last30Days: recentStats[0] || { totalAmount: 0, count: 0 }
         });
 
@@ -319,11 +338,10 @@ export const getDonationStats = async (req, res) => {
 // Export donations to CSV (Admin)
 export const exportDonations = async (req, res) => {
     try {
-        const { status, purpose, startDate, endDate } = req.query;
+        const { status, startDate, endDate } = req.query;
         
         const query = {};
         if (status) query.status = status;
-        if (purpose) query.purpose = purpose;
         if (startDate || endDate) {
             query.createdAt = {};
             if (startDate) query.createdAt.$gte = new Date(startDate);
@@ -339,7 +357,7 @@ export const exportDonations = async (req, res) => {
             const name = d.isAnonymous ? 'Anonymous' : d.donorName;
             const email = d.isAnonymous ? '' : d.donorEmail;
             const message = (d.message || '').replace(/,/g, ';').replace(/\n/g, ' ');
-            return `${date},"${name}","${email}",${d.amount},"${d.purpose}",${d.status},"${message}"`;
+            return `${date},"${name}","${email}",${d.amount},"${d.status}","${message}"`;
         }).join('\n');
 
         const csv = csvHeader + csvRows;
@@ -356,3 +374,5 @@ export const exportDonations = async (req, res) => {
         });
     }
 };
+
+

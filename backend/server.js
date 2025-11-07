@@ -11,6 +11,9 @@ import { connectDB } from './src/config/database.js';
 connectDB();
 const app = express();
 
+// this is the cors config
+// origin is our frontend url 
+// setting credentials to true allows cookies to be sent
 const corsOptions = {
     origin: 'http://localhost:5173', 
     credentials: true
@@ -19,21 +22,25 @@ const corsOptions = {
 app.use(cors());
 
 // Stripe webhooks need raw body
+// what express.raw means is that the body of the request will be parsed as a raw Buffer for only these specific routes
+// we take this raw buffer and pass it to the stripe library to verify the signature using handleWebhook and handleProductWebhook
 app.post('/api/donations/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 app.post('/api/products/webhook', express.raw({ type: 'application/json' }), handleProductWebhook);
 
 // JSON parsing for all other routes
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true })); // just means parsing for URL-encoded data like form submissions
 
 
 if(process.env.NODE_ENV !== 'production') {
+    // what this does is it logs every request method and path to the console
     app.use((req, res, next) => {
         console.log(`${req.method} ${req.path}`);
         next();
     });
 }
 
+// useless
 app.get('/', (req, res) => {
     res.json({
         message: "Welcome to Zonta Club of Naples API",
@@ -45,6 +52,7 @@ app.get('/', (req, res) => {
     });
 });
 
+// also useless
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({ 
@@ -75,19 +83,21 @@ app.use((req, res) => {
 
 // Global error handler/middleware
 app.use((err, req, res, next) => {
-    console.error('Error:', err.stack);
+    console.error('Error:', err.stack); //err stack shows where the error originated
     
-    const statusCode = err.statusCode || 500;
-    const message = err.message || 'Something went wrong!';
+    const statusCode = err.statusCode || 500; // default to 500 if statusCode not set
+    const message = err.message || 'Something went wrong!'; // default error message as well
     
+    // this is the error response
     res.status(statusCode).json({ 
         error: message,
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }) // what does this do
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }) // this copies the stack trace into the response only in development mode
     });
 });
 
 const PORT = process.env.PORT || 3000;
 
+//debug info when the server starts. If the envs show up correctly, then we know the .env file is being read properly
 const server = app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
     console.log(`Email configured: ${process.env.EMAIL_USER}`);
@@ -101,17 +111,18 @@ const gracefulShutdown = async (signal) => {
         process.exit(0);
     })
 
+    // only happens when server doesn't close in time
     setTimeout(() => {
         console.error('Forcing server shutdown...');
         process.exit(1);
     }, 10000);
 };
 
-
+// the process keyword here refers to the Node.js process itself
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM')); //signal termination
 process.on('SIGINT', () => gracefulShutdown('SIGINT')); //signal interrupt (Ctrl+C)
 
-
+//generic uncaught exception and unhandled rejection handlers
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
     process.exit(1);

@@ -24,16 +24,6 @@ const donationSchema = new mongoose.Schema({
         required: true,
         min: 1
     },
-    purpose: {
-        type: String,
-        required: true,
-        enum: ['General Fund', 'Scholarships', 'Community Programs', 'Advocacy', 'Other'],
-        default: 'General Fund'
-    },
-    customPurpose: {
-        type: String,
-        trim: true
-    },
     isRecurring: {
         type: Boolean,
         default: false
@@ -66,11 +56,7 @@ const donationSchema = new mongoose.Schema({
     message: {
         type: String,
         trim: true,
-        maxlength: 500
-    },
-    isAnonymous: {
-        type: Boolean,
-        default: false
+        maxlength: 250
     },
     receiptSent: {
         type: Boolean,
@@ -93,12 +79,26 @@ const donationSchema = new mongoose.Schema({
 donationSchema.index({ status: 1, createdAt: -1 });
 donationSchema.index({ donorEmail: 1 });
 
+// TTL Index: Auto-delete failed/pending donations after 7 days
+// This will automatically remove incomplete donation records
+donationSchema.index(
+    { createdAt: 1 }, 
+    { 
+        expireAfterSeconds: 604800, // 7 days in seconds (7 * 24 * 60 * 60)
+        partialFilterExpression: { 
+            status: { $in: ['failed', 'pending'] } 
+        }
+    }
+);
+
 // Virtual for formatted amount
+// will return amount in dollars with 2 decimal places
 donationSchema.virtual('formattedAmount').get(function() {
     return `$${this.amount.toFixed(2)}`;
 });
 
 // Method to mark as completed
+// sets status to completed and records completedAt timestamp
 donationSchema.methods.markCompleted = function() {
     this.status = 'completed';
     this.completedAt = new Date();
@@ -108,3 +108,5 @@ donationSchema.methods.markCompleted = function() {
 const Donation = mongoose.model('Donation', donationSchema);
 
 export default Donation;
+
+//remove purpose and custom purpose attributes
