@@ -12,12 +12,13 @@ import {
     getCategories
 } from '../controllers/productController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { uploadProductImage, handleMulterErr } from '../middleware/fileUpload.js';
 
 const router = express.Router();
 
 // Public routes
 router.get('/', getAllProducts);
-router.get('/featured', getFeaturedProducts);
+router.get('/featured', getFeaturedProducts); //this will be removed
 router.get('/categories', getCategories);
 
 // Webhook route (will be registered separately in server.js with express.raw())
@@ -25,8 +26,8 @@ router.get('/categories', getCategories);
 
 // Protected admin routes (must come before :identifier route)
 router.get('/admin/stats', protect, getProductStats);
-router.post('/admin', protect, createProduct);
-router.put('/admin/:id', protect, updateProduct);
+router.post('/admin', protect, uploadProductImage, handleMulterErr, createProduct);
+router.put('/admin/:id', protect, uploadProductImage, handleMulterErr, updateProduct);
 router.delete('/admin/:id', protect, deleteProduct);
 
 // Public route with :identifier (must be last to avoid conflicts)
@@ -34,4 +35,4 @@ router.get('/:identifier', getProductById);
 router.post('/checkout', createProductCheckout);
 
 export default router;
-export { handleProductWebhook };
+export { handleProductWebhook }; // we export this here so that it can be imported and used in server.js for raw body parsing

@@ -14,7 +14,7 @@ const router = express.Router();
 
 router.get('/test', testEventEndpoint);
 router.get('/', getEvents);
-router.get('/:id', getEvent);
+router.get('/:id', getEvent); // not sure why this is not protected
 router.post('/', protect, createNewEvent);
 router.put('/:id', protect, updateExistingEvent);
 router.delete('/:id', protect, deleteExistingEvent);

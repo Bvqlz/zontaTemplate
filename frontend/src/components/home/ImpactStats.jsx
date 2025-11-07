@@ -112,7 +112,7 @@ export default function ImpactStats() {
             Every donation and every volunteer hour makes a difference
           </p>
           <a 
-            href="#get-involved"
+            href="/join"
             className="bg-zonta-gold hover:bg-zonta-gold-dark text-white text-lg px-8 py-4 rounded-lg font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-block"
           >
             Join Our Mission

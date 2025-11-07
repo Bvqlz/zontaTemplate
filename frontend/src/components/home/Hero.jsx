@@ -86,7 +86,7 @@ export default function Hero() {
             Become a Member
           </Link>
           <a 
-            href="#donate"
+            href="/donate"
             className="bg-white hover:bg-gray-100 text-zonta-burgundy text-lg px-8 py-4 rounded-lg font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 min-w-[200px]"
           >
             Support Our Cause

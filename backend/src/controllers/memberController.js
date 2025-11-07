@@ -3,6 +3,8 @@ import Member from '../models/Member.js';
 
 export const submitMembershipApplication = async (req, res, next) => {
     try {
+        
+        //destructure the request body to get member application details which is filled out by the user on the membership application form in the frontend
         const { firstName, lastName, email, phone, reason } = req.body;
 
         //will probably change schema to have unique emails
@@ -14,6 +16,7 @@ export const submitMembershipApplication = async (req, res, next) => {
             });
         }
 
+        // create new member application record in the database
         const member = await Member.create({
             firstName: firstName.trim(),
             lastName: lastName.trim(),
@@ -22,6 +25,7 @@ export const submitMembershipApplication = async (req, res, next) => {
             reason: reason.trim()
         });
 
+        // prepare application data for email
         const applicationData = {
             firstName: member.firstName,
             lastName: member.lastName,
@@ -30,10 +34,11 @@ export const submitMembershipApplication = async (req, res, next) => {
             reason: member.reason
         };
 
+        // send email notification to admin and applicant
         await sendMemberShipApplicationEmail(applicationData);
 
         //although ._id was not sent in the request, mongoose automatically creates it
-    
+        // we can include it in the response
         res.status(201).json({
             success: true,
             message: 'Thank you for your application! We will get back to you soon.',
@@ -67,9 +72,12 @@ export const submitMembershipApplication = async (req, res, next) => {
 
 export const getAllMembers = async (req, res, next) => {
     try {
+
         const { status } = req.query; //can be for pending, approved or rejected members. for filtering
 
         const query = {};
+
+        //helps build our query object 
         if(status) {
             query.status = status;
         }
@@ -77,6 +85,7 @@ export const getAllMembers = async (req, res, next) => {
         // newest members first are shown
         const members = await Member.find(query).sort({ submittedAt: -1 }).select('-__v'); //we don't need the __v field which is version key of mongoose documents
 
+        // respond with the members data
         res.json({
             success: true,
             count: members.length,
@@ -91,8 +100,10 @@ export const getAllMembers = async (req, res, next) => {
 
 }
 
+//function is used in the admin dashboard to view individual member applications
 export const getMember = async (req, res, next) => {
     try {
+
         const member = await Member.findById(req.params.id);
 
         if(!member) {
@@ -118,7 +129,7 @@ export const getMember = async (req, res, next) => {
     }
 }
 
-
+// used by admin to update member application status and notes
 export const updateMember = async (req, res, next) => {
     try {
         const { status, notes } = req.body;
@@ -136,7 +147,7 @@ export const updateMember = async (req, res, next) => {
         if(status) member.status = status;
         if(notes) member.notes = notes;
 
-        await member.save();
+        await member.save(); // save the updated member record
 
         res.json({
             success: true,
@@ -151,6 +162,7 @@ export const updateMember = async (req, res, next) => {
     }
 }
 
+// would like to see if its possible to add a status of withdrawn that deletes this record from the db.
 export const deleteMember = async (req, res, next) => {
     try {
         const member = await Member.findByIdAndDelete(req.params.id);
@@ -164,8 +176,8 @@ export const deleteMember = async (req, res, next) => {
 
         res.json({
             success: true,
-            messsage: 'Member application deleted successfully'
-        })
+            message: 'Member application deleted successfully'
+        });
 
         console.log(`Member application deleted: ${member.email}`);
     } catch (error) {
@@ -176,7 +188,7 @@ export const deleteMember = async (req, res, next) => {
 
 
 
-//test endpoint
+//test endpoint that is not used 
 export const testMemberEndpoint = (req, res) => {
     res.json({
         success: true,

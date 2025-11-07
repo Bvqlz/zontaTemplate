@@ -7,6 +7,9 @@ export const submitScholarshipApplication = async (req, res, next) => {
         const { firstName, lastName, email, phone } = req.body;
 
         // uploaded files are accessed
+        // since the request is a multipart/form-data, multer middleware processes the files before this controller
+        // hence why the request has to go through the uploadScholarshipDocs middleware first. found in fileUpload.js.
+        // which attaches the uploaded files to req.files
         const files = req.files || [];
 
         if (files.length === 0) {
@@ -24,7 +27,8 @@ export const submitScholarshipApplication = async (req, res, next) => {
             });
         }
 
-        // Map Cloudinary file data
+        // map uploaded files to document objects for the database
+        // this is a part of the Scholarship schema which goes into the overall scholarship application record
         const documents = files.map(file => ({
             originalName: file.originalname,
             filename: file.filename,
@@ -34,6 +38,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
             mimetype: file.mimetype
         }));
 
+        // creates new scholarship application record in the database
         const scholarship = await Scholarship.create({
             firstName: firstName.trim(),
             lastName: lastName.trim(),
@@ -42,6 +47,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
             documents: documents
         });
 
+        // Prepare application data for email
         const applicationData = {
             firstName: scholarship.firstName,
             lastName: scholarship.lastName,
@@ -52,6 +58,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
         // Send email notification
         await sendScholarshipApplicationEmail(applicationData, files);
 
+        // response for frontend
         res.status(201).json({
             success: true,
             message: 'Scholarship application submitted successfully.',
@@ -69,6 +76,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
 
+            // If there was an error, we should clean up any uploaded files from Cloudinary
             if(req.files) {
                 for(const file of req.files) {
                     // remember that req.files is an array so we loop through each file and delete from cloudinary
@@ -88,6 +96,7 @@ export const submitScholarshipApplication = async (req, res, next) => {
     }
 };
 
+// this function gets all scholarship applications, with optional filtering by status on the admin dashboard
 export const getAllScholarships = async (req, res, next) => {
     try {
         const { status } = req.query;
@@ -110,6 +119,7 @@ export const getAllScholarships = async (req, res, next) => {
     }
 }
 
+// this function gets a single scholarship application by its ID for viewing on the admin dashboard
 export const getScholarship = async (req, res, next) => {
     try {
         const scholarship = await Scholarship.findById(req.params.id);
@@ -138,6 +148,7 @@ export const getScholarship = async (req, res, next) => {
     }
 }
 
+// used by admin to update scholarship application status and notes
 export const updateScholarship = async (req, res, next) => {
     try {
         const { status, notes } = req.body;
@@ -150,6 +161,7 @@ export const updateScholarship = async (req, res, next) => {
             });
         }
 
+        // update fields if provided from body
         if(status) scholarship.status = status;
         if(notes !== undefined) scholarship.notes = notes;
 
@@ -168,6 +180,9 @@ export const updateScholarship = async (req, res, next) => {
     }
 }
 
+// used by admin to delete a scholarship application
+// this implementation is missing from the frontend. an admin cannot delete a scholarship application yet.
+// even if they could, we also need to create a "are you sure?" confirmation dialog to prevent accidental deletions.
 export const deleteScholarship = async (req, res, next) => {
     try {
         const scholarship = await Scholarship.findById(req.params.id);
@@ -204,7 +219,9 @@ export const deleteScholarship = async (req, res, next) => {
 }
 
 
-
+// allows applicants to download the scholarship application form PDF
+// need to migrate this to cloudinary.
+// there should be a createScholarship function so that an admin can upload and manage the form there instead of hosting it locally.
 export const downloadScholarshipForm = (req, res) => {
     try {
         const filePath = path.join(__dirname, '../forms/test-form.pdf');
@@ -237,6 +254,10 @@ export const downloadScholarshipForm = (req, res) => {
     }
 }
 
+// function here for an admin to create an scholarship (like an event or product)
+
+
+// not needed
 export const testScholarshipEndpoint = (req, res) => {
     res.json({
         success: true,

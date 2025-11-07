@@ -1,11 +1,10 @@
 import Product from '../models/product.js';
 import Stripe from 'stripe';
+import cloudinary from '../config/cloudinary.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// @desc    Get all products (public - only active products)
-// @route   GET /api/products
-// @access  Public
+// this gets the products for public view only showing active products
 export const getAllProducts = async (req, res) => {
     try {
         const { category, featured, status, search, sortBy = '-createdAt' } = req.query;
@@ -13,12 +12,14 @@ export const getAllProducts = async (req, res) => {
         const query = {};
         
         // For admin, show all products. For public, only active
+        // req.user would equal a value of true if the request is authenticated as an admin user
         if (req.user) {
-            if (status) query.status = status;
+            if (status) query.status = status; 
         } else {
             query.status = 'active';
         }
         
+        // builds the query object based on filters
         if (category) query.category = category;
         if (featured === 'true') query.featured = true;
         if (search) {
@@ -27,13 +28,15 @@ export const getAllProducts = async (req, res) => {
         
         const products = await Product.find(query)
             .sort(sortBy)
-            .lean();
-        
+            .lean(); // lean does not create full mongoose documents
+
+        // respond with the products data
         res.json({
             success: true,
             count: products.length,
             data: products
         });
+
     } catch (error) {
         console.error('Error fetching products:', error);
         res.status(500).json({
@@ -43,14 +46,16 @@ export const getAllProducts = async (req, res) => {
     }
 };
 
-// @desc    Get single product by ID or slug
-// @route   GET /api/products/:identifier
-// @access  Public
+
+// this would be used to get product details for public view
+// we use this id in the checkout session creation
 export const getProductById = async (req, res) => {
     try {
-        const { identifier } = req.params;
+
+        const { identifier } = req.params; // the product's id
         
         // Try to find by ID first, then by slug
+        // slug is a more human readable unique identifier i.g "zonta-face-mask"
         let product = await Product.findById(identifier);
         if (!product) {
             product = await Product.findOne({ slug: identifier });
@@ -63,7 +68,7 @@ export const getProductById = async (req, res) => {
             });
         }
         
-        // Increment views
+        // Increment views. going to remove this we do not need this functionality
         product.views += 1;
         await product.save();
         
@@ -80,9 +85,7 @@ export const getProductById = async (req, res) => {
     }
 };
 
-// @desc    Get featured products
-// @route   GET /api/products/featured
-// @access  Public
+// this feature as well is going to be removed. shop page is enough
 export const getFeaturedProducts = async (req, res) => {
     try {
         const products = await Product.getFeaturedProducts();
@@ -101,12 +104,26 @@ export const getFeaturedProducts = async (req, res) => {
     }
 };
 
-// @desc    Create new product
-// @route   POST /api/products
-// @access  Private/Admin
+// used in admin dashboard to create new products
 export const createProduct = async (req, res) => {
     try {
-        const product = await Product.create(req.body);
+        // Handle image upload if file is present
+        const productData = { ...req.body };
+        
+        if (req.file) {
+            // Add the uploaded image to the images array
+            productData.images = [{
+                url: req.file.path,
+                publicId: req.file.filename,
+                alt: req.body.name || 'Product image'
+            }];
+            
+            // Set featured image
+            productData.featuredImage = req.file.path;
+        }
+        
+        // based on the form an admin submits to create a new product we create the product
+        const product = await Product.create(productData);
         
         res.status(201).json({
             success: true,
@@ -115,6 +132,16 @@ export const createProduct = async (req, res) => {
     } catch (error) {
         console.error('Error creating product:', error);
         
+        // Clean up uploaded image if product creation fails
+        if (req.file) {
+            try {
+                await cloudinary.uploader.destroy(req.file.filename);
+            } catch (cleanupError) {
+                console.error('Error cleaning up image:', cleanupError);
+            }
+        }
+        
+        // this error code indicates a duplicate key error, likely due to unique fields like SKU or slug
         if (error.code === 11000) {
             return res.status(400).json({
                 success: false,
@@ -129,14 +156,44 @@ export const createProduct = async (req, res) => {
     }
 };
 
-// @desc    Update product
-// @route   PUT /api/products/:id
-// @access  Private/Admin
+// if we want to update product details from admin dashboard
 export const updateProduct = async (req, res) => {
     try {
+        const productData = { ...req.body };
+        
+        // Handle new image upload
+        if (req.file) {
+            // Get existing product to delete old image
+            const existingProduct = await Product.findById(req.params.id);
+            
+            if (existingProduct && existingProduct.images.length > 0) {
+                // Delete old image from Cloudinary
+                const oldImagePublicId = existingProduct.images[0].publicId;
+                if (oldImagePublicId) {
+                    try {
+                        await cloudinary.uploader.destroy(oldImagePublicId);
+                    } catch (deleteError) {
+                        console.error('Error deleting old image:', deleteError);
+                    }
+                }
+            }
+            
+            // Add new image
+            productData.images = [{
+                url: req.file.path,
+                publicId: req.file.filename,
+                alt: req.body.name || 'Product image'
+            }];
+            
+            productData.featuredImage = req.file.path;
+        }
+        
+        // update the product based on the request body
+        // new and runValidators ensure we get the updated document and validate the fields
+        // no need for product.save() after findByIdAndUpdate
         const product = await Product.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            productData,
             {
                 new: true,
                 runValidators: true
@@ -144,6 +201,15 @@ export const updateProduct = async (req, res) => {
         );
         
         if (!product) {
+            // Clean up uploaded image if product not found
+            if (req.file) {
+                try {
+                    await cloudinary.uploader.destroy(req.file.filename);
+                } catch (cleanupError) {
+                    console.error('Error cleaning up image:', cleanupError);
+                }
+            }
+            
             return res.status(404).json({
                 success: false,
                 error: 'Product not found'
@@ -156,6 +222,16 @@ export const updateProduct = async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating product:', error);
+        
+        // Clean up uploaded image if update fails
+        if (req.file) {
+            try {
+                await cloudinary.uploader.destroy(req.file.filename);
+            } catch (cleanupError) {
+                console.error('Error cleaning up image:', cleanupError);
+            }
+        }
+        
         res.status(400).json({
             success: false,
             error: error.message || 'Failed to update product'
@@ -163,12 +239,10 @@ export const updateProduct = async (req, res) => {
     }
 };
 
-// @desc    Delete product
-// @route   DELETE /api/products/:id
-// @access  Private/Admin
+// used in admin dashboard to delete a product
 export const deleteProduct = async (req, res) => {
     try {
-        const product = await Product.findByIdAndDelete(req.params.id);
+        const product = await Product.findById(req.params.id);
         
         if (!product) {
             return res.status(404).json({
@@ -176,6 +250,21 @@ export const deleteProduct = async (req, res) => {
                 error: 'Product not found'
             });
         }
+        
+        // Delete associated images from Cloudinary
+        if (product.images && product.images.length > 0) {
+            for (const image of product.images) {
+                if (image.publicId) {
+                    try {
+                        await cloudinary.uploader.destroy(image.publicId);
+                    } catch (deleteError) {
+                        console.error('Error deleting image from Cloudinary:', deleteError);
+                    }
+                }
+            }
+        }
+        
+        await Product.findByIdAndDelete(req.params.id);
         
         res.json({
             success: true,
@@ -190,11 +279,11 @@ export const deleteProduct = async (req, res) => {
     }
 };
 
-// @desc    Create Stripe checkout session for product purchase
-// @route   POST /api/products/checkout
-// @access  Public
+// like the dontation checkout session we create a stripe checkout session for product purchase
 export const createProductCheckout = async (req, res) => {
     try {
+        // quantity defaults to 1 if not provided
+        // but once again this is info a user would fill out in the frontend
         const { productId, quantity = 1, customerEmail, customerName } = req.body;
         
         // Validate input
@@ -216,6 +305,8 @@ export const createProductCheckout = async (req, res) => {
         }
         
         // Check if product is available
+        // meaning its status is active
+        // status can disactivate for various reasons like out of stock or admin disabled
         if (!product.isAvailable()) {
             return res.status(400).json({
                 success: false,
@@ -223,7 +314,7 @@ export const createProductCheckout = async (req, res) => {
             });
         }
         
-        // Check inventory
+        // we check the inventory levels if we are tracking inventory and backorders are not allowed
         if (product.trackInventory && !product.allowBackorder && product.inventory < quantity) {
             return res.status(400).json({
                 success: false,
@@ -232,6 +323,8 @@ export const createProductCheckout = async (req, res) => {
         }
         
         // Create Stripe checkout session
+        // success_url redirects to frontend success page after payment
+        // cancel_url redirects back to shop page if user cancels
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'payment',
@@ -274,9 +367,7 @@ export const createProductCheckout = async (req, res) => {
     }
 };
 
-// @desc    Handle Stripe webhook for product purchases
-// @route   POST /api/products/webhook
-// @access  Public (Stripe only)
+// this handles stripe webhooks for product purchases
 export const handleProductWebhook = async (req, res) => {
     const sig = req.headers['stripe-signature'];
     
@@ -318,9 +409,7 @@ export const handleProductWebhook = async (req, res) => {
     }
 };
 
-// @desc    Get product statistics
-// @route   GET /api/products/stats
-// @access  Private/Admin
+// gets the stats for product performance
 export const getProductStats = async (req, res) => {
     try {
         const totalProducts = await Product.countDocuments();
@@ -367,9 +456,7 @@ export const getProductStats = async (req, res) => {
     }
 };
 
-// @desc    Get categories with product counts
-// @route   GET /api/products/categories
-// @access  Public
+// this gets the categories with product counts i.g "Apparel (1)"
 export const getCategories = async (req, res) => {
     try {
         const categories = await Product.aggregate([

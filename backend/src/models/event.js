@@ -63,10 +63,12 @@ eventSchema.virtual('isUpcoming').get(function() {
     return this.date > new Date();
 })
 
+//maybe if an event is past. it can be deleted from database records. 
 eventSchema.virtual('isPast').get(function() {
     return this.date <= new Date();
 })
 
+//what this does is that when we convert a mongoose document to JSON or Object, it will include the virtuals we defined above
 eventSchema.set('toJSON', { virtuals: true });
 eventSchema.set('toObject', { virtuals: true });
 

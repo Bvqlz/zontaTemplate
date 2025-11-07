@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { connectDB } from '../config/database.js';
 import readline from 'readline';
 
+//this script creates an admin user in the database
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,6 +27,8 @@ const createAdmin = async () => {
             console.log('Email:', existingAdmin.email);
             console.log('Role:', existingAdmin.role);
             
+            // what this does is that it prompts the user if they want to update the password
+            // readline module is used to get input from command linexc
             const rl = readline.createInterface({
                 input: process.stdin,
                 output: process.stdout
@@ -34,8 +37,8 @@ const createAdmin = async () => {
             rl.question('Update password? (yes/no): ', async (answer) => {
                 if (answer.toLowerCase() === 'yes') {
                     rl.question('Enter new password: ', async (newPassword) => {
-                        existingAdmin.password = newPassword;
-                        await existingAdmin.save();
+                        existingAdmin.password = newPassword; // Will be hashed by pre-save middleware
+                        await existingAdmin.save(); // save updated admin record
                         console.log('Password updated successfully!');
                         rl.close();
                         process.exit(0);
@@ -47,7 +50,7 @@ const createAdmin = async () => {
             });
         } else {
             // Create new admin
-            const adminPassword = process.argv[2];
+            const adminPassword = process.argv[2]; // where the password input is located
             
             if (!adminPassword) {
                 console.error('Please provide a password as argument or set ADMIN_DEFAULT_PASSWORD in .env');

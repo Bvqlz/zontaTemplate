@@ -12,12 +12,12 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Product description is required'],
         trim: true,
-        maxlength: [2000, 'Description cannot exceed 2000 characters']
+        maxlength: [500, 'Description cannot exceed 500 characters']
     },
     shortDescription: {
         type: String,
         trim: true,
-        maxlength: [500, 'Short description cannot exceed 500 characters']
+        maxlength: [250, 'Short description cannot exceed 250 characters']
     },
     
     // Pricing
@@ -26,11 +26,7 @@ const productSchema = new mongoose.Schema({
         required: [true, 'Product price is required'],
         min: [0, 'Price cannot be negative']
     },
-    compareAtPrice: {
-        type: Number,
-        min: [0, 'Compare price cannot be negative']
-    },
-    
+   
     // Inventory
     inventory: {
         type: Number,
@@ -60,11 +56,7 @@ const productSchema = new mongoose.Schema({
         enum: ['Apparel', 'Accessories', 'Books', 'Home & Garden', 'Jewelry', 'Art', 'Other'],
         default: 'Other'
     },
-    tags: [{
-        type: String,
-        trim: true
-    }],
-    
+     
     // Images
     images: [{
         url: {
@@ -72,16 +64,15 @@ const productSchema = new mongoose.Schema({
             required: true
         },
         publicId: {
-            type: String
+            type: String,
+            required: true // Required for Cloudinary deletion
         },
         alt: {
             type: String,
             default: ''
         }
     }],
-    featuredImage: {
-        type: String
-    },
+
     
     // Product Status
     status: {
@@ -126,11 +117,6 @@ const productSchema = new mongoose.Schema({
     
     // Stats
     totalSold: {
-        type: Number,
-        default: 0,
-        min: 0
-    },
-    views: {
         type: Number,
         default: 0,
         min: 0
@@ -221,3 +207,7 @@ productSchema.statics.getFeaturedProducts = function() {
 const Product = mongoose.model('Product', productSchema);
 
 export default Product;
+
+
+// description and short description can be shortened 
+// compareAtPrice is not needed 

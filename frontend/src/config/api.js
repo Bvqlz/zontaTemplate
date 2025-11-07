@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// uses axios create to make an instance of the backend api using its url
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
@@ -16,7 +17,7 @@ const api = axios.create({
 // an error occurs when setting up the request
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token'); // so if the route was protected, we send the token
         if(token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }

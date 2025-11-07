@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 export default function Mission() {
   return (
     <section id="about" className="py-20 max-w-6xl mx-auto text-center px-6">
+      {/*The Mission Statement is not consistent with the rest of the home page need to change this */}
       <motion.h3
         className="text-3xl font-bold text-red-800 mb-6"
         initial={{ opacity: 0, y: 30 }}

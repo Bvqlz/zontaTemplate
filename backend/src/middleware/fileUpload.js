@@ -43,6 +43,49 @@ const upload = multer({
 
 export const uploadScholarshipDocs = upload.array('documents', 2);
 
+// Separate storage configuration for product images
+const productImageStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'zonta-products',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        resource_type: 'image',
+        transformation: [{ width: 1200, height: 1200, crop: 'limit', quality: 'auto' }],
+        public_id: (req, file) => {
+            const timestamp = Date.now();
+            const originalName = file.originalname.replace(/\.[^/.]+$/, '');
+            return `${originalName}-${timestamp}`;
+        }
+    }
+});
+
+// Filter for image files only
+const imageFileFilter = (req, file, cb) => {
+    const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp'
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.'), false);
+    }
+};
+
+const productImageUpload = multer({
+    storage: productImageStorage,
+    fileFilter: imageFileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5 MB limit
+        files: 1 // Single image for featured image
+    }
+});
+
+export const uploadProductImage = productImageUpload.single('image');
+
 export const handleMulterErr = (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {

@@ -3,13 +3,6 @@ import { useNavigate } from 'react-router-dom';
 
 const PRESET_AMOUNTS = [25, 50, 100, 250, 500, 1000];
 
-const PURPOSES = [
-    'General Fund',
-    'Scholarships',
-    'Community Programs',
-    'Advocacy',
-    'Other'
-];
 
 function Donate() {
     const navigate = useNavigate();
@@ -25,10 +18,7 @@ function Donate() {
         donorName: '',
         donorEmail: '',
         donorPhone: '',
-        purpose: 'General Fund',
-        customPurpose: '',
         message: '',
-        isAnonymous: false,
         isRecurring: false,
         frequency: 'one-time'
     });
@@ -71,10 +61,6 @@ function Donate() {
             
             if (!amount || amount < 1) {
                 throw new Error('Please enter a valid donation amount');
-            }
-
-            if (formData.purpose === 'Other' && !formData.customPurpose) {
-                throw new Error('Please specify your donation purpose');
             }
 
             // Create checkout session
@@ -171,46 +157,7 @@ function Donate() {
                         </div>
                     </div>
 
-                    {/* Purpose Selection */}
-                    <div className="mb-6">
-                        <label htmlFor="purpose" className="block text-sm font-semibold text-gray-700 mb-2">
-                            Donation Purpose *
-                        </label>
-                        <select
-                            id="purpose"
-                            name="purpose"
-                            value={formData.purpose}
-                            onChange={handleInputChange}
-                            required
-                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-zonta-burgundy transition-colors"
-                        >
-                            {PURPOSES.map((purpose) => (
-                                <option key={purpose} value={purpose}>
-                                    {purpose}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Custom Purpose */}
-                    {formData.purpose === 'Other' && (
-                        <div className="mb-6">
-                            <label htmlFor="customPurpose" className="block text-sm font-semibold text-gray-700 mb-2">
-                                Please Specify Purpose *
-                            </label>
-                            <input
-                                type="text"
-                                id="customPurpose"
-                                name="customPurpose"
-                                value={formData.customPurpose}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="e.g., Women's Shelter, Educational Program"
-                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-zonta-burgundy transition-colors"
-                            />
-                        </div>
-                    )}
-
+                    
                     {/* Donor Information */}
                     <div className="mb-6">
                         <h3 className="text-lg font-bold text-gray-800 mb-4">Your Information</h3>
@@ -227,7 +174,6 @@ function Donate() {
                                     value={formData.donorName}
                                     onChange={handleInputChange}
                                     required
-                                    disabled={formData.isAnonymous}
                                     placeholder="John Doe"
                                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-zonta-burgundy transition-colors disabled:bg-gray-100"
                                 />
@@ -263,20 +209,6 @@ function Donate() {
                                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-zonta-burgundy transition-colors"
                             />
                         </div>
-
-                        <div className="flex items-center">
-                            <input
-                                type="checkbox"
-                                id="isAnonymous"
-                                name="isAnonymous"
-                                checked={formData.isAnonymous}
-                                onChange={handleInputChange}
-                                className="w-5 h-5 text-zonta-burgundy focus:ring-zonta-burgundy border-gray-300 rounded"
-                            />
-                            <label htmlFor="isAnonymous" className="ml-3 text-sm text-gray-700">
-                                Make this donation anonymous
-                            </label>
-                        </div>
                     </div>
 
                     {/* Message */}
@@ -295,7 +227,7 @@ function Donate() {
                             className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-zonta-burgundy transition-colors resize-none"
                         />
                         <p className="text-sm text-gray-500 mt-1">
-                            {formData.message.length}/500 characters
+                            {formData.message.length}/250 characters
                         </p>
                     </div>
 
@@ -306,14 +238,6 @@ function Donate() {
                             <span className="text-gray-700">Amount:</span>
                             <span className="text-2xl font-bold text-zonta-burgundy">
                                 ${currentAmount.toFixed(2)}
-                            </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm text-gray-600">
-                            <span>Purpose:</span>
-                            <span className="font-semibold">
-                                {formData.purpose === 'Other' && formData.customPurpose
-                                    ? formData.customPurpose
-                                    : formData.purpose}
                             </span>
                         </div>
                     </div>
@@ -343,45 +267,21 @@ function Donate() {
                     </button>
 
                     <p className="text-center text-sm text-gray-500 mt-4">
-                        🔒 Secure payment powered by Stripe. Your donation is tax-deductible.
+                        Secure payment powered by Stripe.
                     </p>
                 </form>
 
                 {/* Additional Info */}
-                <div className="mt-12 grid md:grid-cols-3 gap-6">
-                    <div className="bg-white rounded-lg shadow p-6 text-center">
-                        <div className="w-12 h-12 bg-zonta-burgundy/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-zonta-burgundy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                        </div>
-                        <h4 className="font-bold text-gray-800 mb-2">Secure & Safe</h4>
-                        <p className="text-sm text-gray-600">
-                            All transactions are encrypted and secure
-                        </p>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow p-6 text-center">
-                        <div className="w-12 h-12 bg-zonta-gold/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-zonta-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </div>
-                        <h4 className="font-bold text-gray-800 mb-2">Tax Deductible</h4>
-                        <p className="text-sm text-gray-600">
-                            Receipt sent automatically to your email
-                        </p>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow p-6 text-center">
-                        <div className="w-12 h-12 bg-zonta-burgundy/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-zonta-burgundy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="mt-12">
+                    <div className="bg-white rounded-lg shadow-lg p-8 text-center max-w-2xl mx-auto border-t-4 border-zonta-burgundy">
+                        <div className="w-16 h-16 bg-zonta-burgundy/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-zonta-burgundy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
                         </div>
-                        <h4 className="font-bold text-gray-800 mb-2">Direct Impact</h4>
-                        <p className="text-sm text-gray-600">
-                            100% of your donation supports our mission
+                        <h4 className="font-bold text-gray-800 mb-3 text-xl">Direct Impact</h4>
+                        <p className="text-gray-600 text-lg leading-relaxed">
+                            100% of your donation supports our mission to empower women and girls through service and advocacy
                         </p>
                     </div>
                 </div>
