@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import apiService from '../utils/apiService';
 
 const Shop = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -14,6 +15,38 @@ const Shop = () => {
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [sortBy, setSortBy] = useState('-createdAt');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Handle canceled checkout - mark order as failed
+    useEffect(() => {
+        const canceled = searchParams.get('canceled');
+        const orderId = searchParams.get('order_id');
+
+        if (canceled === 'true' && orderId) {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            
+            fetch(`${apiUrl}/api/products/cancel/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(async (response) => {
+                const data = await response.json();
+                
+                if (response.ok) {
+                    console.log('Order marked as canceled');
+                } else {
+                    console.error('Failed to cancel order:', data);
+                }
+                
+                // Clean up URL parameters
+                navigate('/shop', { replace: true });
+            })
+            .catch(err => {
+                console.error('Error canceling order:', err);
+            });
+        }
+    }, [searchParams, navigate]);
 
     useEffect(() => {
         fetchProducts();
@@ -191,9 +224,9 @@ const Shop = () => {
                             >
                                 {/* Product Image */}
                                 <div className="relative h-64 bg-gray-200">
-                                    {product.featuredImage ? (
+                                    {product.images && product.images.length > 0 ? (
                                         <img
-                                            src={product.featuredImage}
+                                            src={product.images[0].url}
                                             alt={product.name}
                                             className="w-full h-full object-cover"
                                         />
@@ -203,17 +236,7 @@ const Shop = () => {
                                         </div>
                                     )}
                                     
-                                    {/* Badges */}
-                                    {product.featured && (
-                                        <span className="absolute top-2 left-2 bg-gold text-white text-xs px-2 py-1 rounded">
-                                            Featured
-                                        </span>
-                                    )}
-                                    {product.compareAtPrice && product.compareAtPrice > product.price && (
-                                        <span className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded">
-                                            {Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}% OFF
-                                        </span>
-                                    )}
+                                    {/* Out of Stock Badge */}
                                     {product.trackInventory && product.inventory === 0 && (
                                         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                                             <span className="bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold">

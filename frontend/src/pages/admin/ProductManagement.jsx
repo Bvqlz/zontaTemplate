@@ -297,9 +297,9 @@ const ProductManagement = () => {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className="h-10 w-10 flex-shrink-0">
-                                                {product.featuredImage ? (
+                                                {product.images && product.images.length > 0 ? (
                                                     <img
-                                                        src={product.featuredImage}
+                                                        src={product.images[0].url}
                                                         alt={product.name}
                                                         className="h-10 w-10 rounded object-cover"
                                                     />

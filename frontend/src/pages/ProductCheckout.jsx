@@ -116,13 +116,13 @@ const ProductCheckout = () => {
     const totalPrice = (product?.price || 0) * formData.quantity;
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gray-50 pt-28 pb-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl mx-auto">
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                     {/* Header */}
                     <div className="bg-gradient-to-r from-zonta-burgundy to-zonta-burgundy-dark p-6 text-white">
                         <h1 className="text-3xl font-bold">Checkout</h1>
-                        <p className="text-zonta-burgundy-light mt-1">Complete your purchase</p>
+                        <p className="text-zonta-gold-light mt-1">Complete your purchase</p>
                     </div>
 
                     <div className="p-6">
@@ -130,9 +130,9 @@ const ProductCheckout = () => {
                         <div className="border-b pb-6 mb-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4">Product Details</h2>
                             <div className="flex items-start gap-4">
-                                {product?.featuredImage ? (
+                                {product?.images && product.images.length > 0 ? (
                                     <img
-                                        src={product.featuredImage}
+                                        src={product.images[0].url}
                                         alt={product.name}
                                         className="w-24 h-24 object-cover rounded"
                                     />
@@ -199,19 +199,21 @@ const ProductCheckout = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Quantity *
                                 </label>
-                                <select
+                                <input
+                                    type="number"
                                     name="quantity"
                                     value={formData.quantity}
                                     onChange={handleChange}
                                     required
+                                    min="1"
+                                    max={maxQuantity}
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-zonta-burgundy focus:border-transparent"
-                                >
-                                    {[...Array(maxQuantity)].map((_, i) => (
-                                        <option key={i + 1} value={i + 1}>
-                                            {i + 1}
-                                        </option>
-                                    ))}
-                                </select>
+                                />
+                                {product?.trackInventory && !product?.allowBackorder && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Maximum available: {product.inventory}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Order Summary */}

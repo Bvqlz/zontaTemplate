@@ -1,4 +1,5 @@
 import Product from '../models/product.js';
+import Order from '../models/order.js';
 import Stripe from 'stripe';
 import cloudinary from '../config/cloudinary.js';
 
@@ -7,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // this gets the products for public view only showing active products
 export const getAllProducts = async (req, res) => {
     try {
-        const { category, featured, status, search, sortBy = '-createdAt' } = req.query;
+        const { category, status, search, sortBy = '-createdAt' } = req.query;
         
         const query = {};
         
@@ -21,7 +22,6 @@ export const getAllProducts = async (req, res) => {
         
         // builds the query object based on filters
         if (category) query.category = category;
-        if (featured === 'true') query.featured = true;
         if (search) {
             query.$text = { $search: search };
         }
@@ -68,10 +68,6 @@ export const getProductById = async (req, res) => {
             });
         }
         
-        // Increment views. going to remove this we do not need this functionality
-        product.views += 1;
-        await product.save();
-        
         res.json({
             success: true,
             data: product
@@ -81,25 +77,6 @@ export const getProductById = async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to fetch product'
-        });
-    }
-};
-
-// this feature as well is going to be removed. shop page is enough
-export const getFeaturedProducts = async (req, res) => {
-    try {
-        const products = await Product.getFeaturedProducts();
-        
-        res.json({
-            success: true,
-            count: products.length,
-            data: products
-        });
-    } catch (error) {
-        console.error('Error fetching featured products:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch featured products'
         });
     }
 };
@@ -117,9 +94,6 @@ export const createProduct = async (req, res) => {
                 publicId: req.file.filename,
                 alt: req.body.name || 'Product image'
             }];
-            
-            // Set featured image
-            productData.featuredImage = req.file.path;
         }
         
         // based on the form an admin submits to create a new product we create the product
@@ -184,8 +158,6 @@ export const updateProduct = async (req, res) => {
                 publicId: req.file.filename,
                 alt: req.body.name || 'Product image'
             }];
-            
-            productData.featuredImage = req.file.path;
         }
         
         // update the product based on the request body
@@ -321,6 +293,18 @@ export const createProductCheckout = async (req, res) => {
                 error: `Only ${product.inventory} items available in stock`
             });
         }
+
+        // Create order record (status: pending)
+        const order = await Order.create({
+            customerName,
+            customerEmail,
+            productId: product._id,
+            productName: product.name,
+            quantity,
+            pricePerUnit: product.price,
+            totalAmount: product.price * quantity,
+            status: 'pending'
+        });
         
         // Create Stripe checkout session
         // success_url redirects to frontend success page after payment
@@ -335,8 +319,8 @@ export const createProductCheckout = async (req, res) => {
                         currency: 'usd',
                         product_data: {
                             name: product.name,
-                            description: product.shortDescription || product.description.substring(0, 200),
-                            images: product.featuredImage ? [product.featuredImage] : []
+                            description: product.description || product.shortDescription || '',
+                            images: product.images && product.images.length > 0 ? [product.images[0].url] : []
                         },
                         unit_amount: Math.round(product.price * 100) // Convert to cents
                     },
@@ -344,19 +328,25 @@ export const createProductCheckout = async (req, res) => {
                 }
             ],
             success_url: `${process.env.FRONTEND_URL}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_URL}/shop`,
+            cancel_url: `${process.env.FRONTEND_URL}/shop?canceled=true&order_id=${order._id}`,
             metadata: {
+                orderId: order._id.toString(),
                 productId: product._id.toString(),
                 productName: product.name,
                 quantity: quantity.toString(),
                 customerName
             }
         });
+
+        // Update order with Stripe session ID
+        order.stripeSessionId = session.id;
+        await order.save();
         
         res.json({
             success: true,
             sessionId: session.id,
-            url: session.url
+            url: session.url,
+            orderId: order._id
         });
     } catch (error) {
         console.error('Error creating checkout session:', error);
@@ -367,45 +357,163 @@ export const createProductCheckout = async (req, res) => {
     }
 };
 
-// this handles stripe webhooks for product purchases
+// Stripe Webhook Handler for Product Purchases
 export const handleProductWebhook = async (req, res) => {
     const sig = req.headers['stripe-signature'];
-    
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event;
+
     try {
-        const event = stripe.webhooks.constructEvent(
-            req.body,
-            sig,
-            process.env.STRIPE_WEBHOOK_SECRET
-        );
-        
-        // Handle the event
+        // Verify webhook signature to ensure request is from Stripe
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err) {
+        console.error('Webhook signature verification failed:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the specific events we care about
+    try {
         switch (event.type) {
             case 'checkout.session.completed':
                 const session = event.data.object;
                 
-                // Get product and decrease inventory
-                const productId = session.metadata.productId;
-                const quantity = parseInt(session.metadata.quantity);
+                // Find order by session ID and update status
+                const order = await Order.findOne({ stripeSessionId: session.id });
                 
-                const product = await Product.findById(productId);
-                if (product) {
-                    await product.decreaseInventory(quantity);
-                    console.log(`Inventory decreased for product: ${product.name}, Quantity: ${quantity}`);
+                if (order) {
+                    order.status = 'completed';
+                    order.completedAt = new Date();
+                    order.stripePaymentIntentId = session.payment_intent;
+                    order.stripeCustomerId = session.customer;
+                    await order.save();
+                    
+                    console.log(`Order ${order._id} marked as completed`);
+
+                    // Decrease product inventory
+                    const product = await Product.findById(order.productId);
+                    if (product) {
+                        await product.decreaseInventory(order.quantity);
+                        console.log(`Inventory decreased for product: ${product.name}, Quantity: ${order.quantity}`);
+                    }
                 }
                 break;
-                
+
             case 'payment_intent.payment_failed':
-                console.log('Payment failed:', event.data.object);
-                break;
+                const failedPayment = event.data.object;
+                let failedOrder = await Order.findOne({ 
+                    stripePaymentIntentId: failedPayment.id 
+                });
                 
+                if (!failedOrder && failedPayment.metadata?.orderId) {
+                    failedOrder = await Order.findById(failedPayment.metadata.orderId);
+                }
+                
+                if (failedOrder) {
+                    failedOrder.status = 'failed';
+                    await failedOrder.save();
+                    console.log(`Order ${failedOrder._id} marked as failed (payment failed)`);
+                }
+                break;
+
+            case 'checkout.session.expired':
+                const expiredSession = event.data.object;
+                const expiredOrder = await Order.findOne({ 
+                    stripeSessionId: expiredSession.id 
+                });
+                
+                if (expiredOrder && expiredOrder.status === 'pending') {
+                    expiredOrder.status = 'failed';
+                    await expiredOrder.save();
+                    console.log(`Order ${expiredOrder._id} marked as failed (session expired)`);
+                }
+                break;
+            
+            case 'checkout.session.async_payment_failed':
+                const asyncFailedSession = event.data.object;
+                const asyncFailedOrder = await Order.findOne({ 
+                    stripeSessionId: asyncFailedSession.id 
+                });
+                
+                if (asyncFailedOrder) {
+                    asyncFailedOrder.status = 'failed';
+                    await asyncFailedOrder.save();
+                    console.log(`Order ${asyncFailedOrder._id} marked as failed (async payment failed)`);
+                }
+                break;
+
+            // Ignore other Stripe events
             default:
-                console.log(`Unhandled event type: ${event.type}`);
+                break;
         }
-        
+
         res.json({ received: true });
     } catch (error) {
-        console.error('Webhook error:', error);
-        return res.status(400).send(`Webhook Error: ${error.message}`);
+        console.error('Error handling webhook:', error);
+        res.status(500).json({ error: 'Webhook handler failed' });
+    }
+};
+
+// Get order by session ID (for success page)
+export const getOrderBySessionId = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+
+        const order = await Order.findOne({ stripeSessionId: sessionId })
+            .populate('productId', 'name description images');
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                error: 'Order not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: order
+        });
+    } catch (error) {
+        console.error('Error fetching order:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch order details'
+        });
+    }
+};
+
+// Cancel/mark order as failed when user cancels checkout
+export const cancelOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        const order = await Order.findById(orderId);
+
+        if (!order) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Order not found' 
+            });
+        }
+
+        // Only cancel if it's still pending
+        if (order.status === 'pending') {
+            order.status = 'failed';
+            await order.save();
+            console.log(`Order ${order._id} marked as failed (user canceled checkout)`);
+        }
+
+        res.json({ 
+            success: true,
+            message: 'Order canceled',
+            order 
+        });
+    } catch (error) {
+        console.error('Error canceling order:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to cancel order' 
+        });
     }
 };
 
@@ -474,6 +582,180 @@ export const getCategories = async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to get categories'
+        });
+    }
+};
+
+// Get all orders with filtering
+export const getAllOrders = async (req, res) => {
+    try {
+        const { status, startDate, endDate, page = 1, limit = 50 } = req.query;
+        
+        const query = {};
+        
+        if (status) query.status = status;
+        
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) query.createdAt.$lte = new Date(endDate);
+        }
+        
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        const orders = await Order.find(query)
+            .populate('productId', 'name images')
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .skip(skip);
+        
+        const total = await Order.countDocuments(query);
+        
+        res.json({
+            success: true,
+            orders,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch orders'
+        });
+    }
+};
+
+// Get order statistics
+export const getOrderStats = async (req, res) => {
+    try {
+        // Get all orders count
+        const totalCount = await Order.countDocuments();
+        
+        // Total completed orders stats
+        const totalStats = await Order.aggregate([
+            { $match: { status: 'completed' } },
+            {
+                $group: {
+                    _id: null,
+                    totalAmount: { $sum: '$totalAmount' },
+                    count: { $sum: 1 },
+                    averageAmount: { $avg: '$totalAmount' }
+                }
+            }
+        ]);
+
+        // Last 30 days stats
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const last30DaysStats = await Order.aggregate([
+            {
+                $match: {
+                    status: 'completed',
+                    createdAt: { $gte: thirtyDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalAmount: { $sum: '$totalAmount' },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Status breakdown
+        const statusBreakdown = await Order.aggregate([
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const statusObj = statusBreakdown.reduce((acc, item) => {
+            acc[item._id] = item.count;
+            return acc;
+        }, {});
+
+        const stats = totalStats[0] || { totalAmount: 0, count: 0, averageAmount: 0 };
+        const recent = last30DaysStats[0] || { totalAmount: 0, count: 0 };
+
+        res.json({
+            totalCount: totalCount,
+            totalRevenue: stats.totalAmount,
+            averageOrder: stats.averageAmount,
+            completedCount: stats.count,
+            last30Days: {
+                totalAmount: recent.totalAmount,
+                count: recent.count
+            },
+            statusBreakdown: {
+                completed: statusObj.completed || 0,
+                pending: statusObj.pending || 0,
+                failed: statusObj.failed || 0
+            }
+        });
+    } catch (error) {
+        console.error('Error getting order stats:', error);
+        res.status(500).json({
+            error: 'Failed to get order statistics'
+        });
+    }
+};
+
+// Export orders to CSV
+export const exportOrders = async (req, res) => {
+    try {
+        const { status, startDate, endDate } = req.query;
+        
+        const query = {};
+        
+        if (status) query.status = status;
+        
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) query.createdAt.$lte = new Date(endDate);
+        }
+        
+        const orders = await Order.find(query)
+            .populate('productId', 'name')
+            .sort({ createdAt: -1 });
+        
+        // Create CSV
+        const csvRows = [];
+        csvRows.push(['Date', 'Customer Name', 'Email', 'Product', 'Quantity', 'Price Per Unit', 'Total Amount', 'Status'].join(','));
+        
+        orders.forEach(order => {
+            const row = [
+                new Date(order.createdAt).toLocaleString(),
+                order.customerName,
+                order.customerEmail,
+                order.productName,
+                order.quantity,
+                order.pricePerUnit.toFixed(2),
+                order.totalAmount.toFixed(2),
+                order.status
+            ];
+            csvRows.push(row.join(','));
+        });
+        
+        const csv = csvRows.join('\n');
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=orders.csv');
+        res.send(csv);
+    } catch (error) {
+        console.error('Error exporting orders:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to export orders'
         });
     }
 };

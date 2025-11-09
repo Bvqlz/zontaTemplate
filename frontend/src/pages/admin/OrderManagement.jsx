@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
-function DonationManagement() {
-    const [donations, setDonations] = useState([]);
+function OrderManagement() {
+    const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [statistics, setStatistics] = useState(null);
@@ -11,11 +11,11 @@ function DonationManagement() {
     const [dateFilter, setDateFilter] = useState('all');
 
     useEffect(() => {
-        fetchDonations();
+        fetchOrders();
         fetchStatistics();
     }, [statusFilter, dateFilter]);
 
-    const fetchDonations = async () => {
+    const fetchOrders = async () => {
         setLoading(true);
         setError('');
 
@@ -44,7 +44,7 @@ function DonationManagement() {
             }
 
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/donations?${params.toString()}`,
+                `${import.meta.env.VITE_API_URL}/api/products/admin/orders?${params.toString()}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -53,15 +53,15 @@ function DonationManagement() {
             );
 
             if (!response.ok) {
-                throw new Error('Failed to fetch donations');
+                throw new Error('Failed to fetch orders');
             }
 
             const data = await response.json();
-            setDonations(data.donations);
+            setOrders(data.orders);
             
         } catch (err) {
-            console.error('Error fetching donations:', err);
-            setError('Failed to load donations');
+            console.error('Error fetching orders:', err);
+            setError('Failed to load orders');
         } finally {
             setLoading(false);
         }
@@ -71,7 +71,7 @@ function DonationManagement() {
         try {
             const token = localStorage.getItem('token');
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/donations/stats`,
+                `${import.meta.env.VITE_API_URL}/api/products/admin/orders/stats`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -96,7 +96,7 @@ function DonationManagement() {
             if (statusFilter) params.append('status', statusFilter);
 
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/donations/export?${params.toString()}`,
+                `${import.meta.env.VITE_API_URL}/api/products/admin/orders/export?${params.toString()}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -105,7 +105,7 @@ function DonationManagement() {
             );
 
             if (!response.ok) {
-                throw new Error('Failed to export donations');
+                throw new Error('Failed to export orders');
             }
 
             // Download the CSV file
@@ -113,15 +113,15 @@ function DonationManagement() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `donations-${Date.now()}.csv`;
+            a.download = `orders-${Date.now()}.csv`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
 
         } catch (err) {
-            console.error('Error exporting donations:', err);
-            alert('Failed to export donations');
+            console.error('Error exporting orders:', err);
+            alert('Failed to export orders');
         }
     };
 
@@ -129,8 +129,7 @@ function DonationManagement() {
         const styles = {
             completed: 'bg-green-100 text-green-800',
             pending: 'bg-yellow-100 text-yellow-800',
-            failed: 'bg-red-100 text-red-800',
-            refunded: 'bg-gray-100 text-gray-800'
+            failed: 'bg-red-100 text-red-800'
         };
 
         return (
@@ -155,12 +154,12 @@ function DonationManagement() {
             {/* Header */}
             <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-zonta-burgundy">Donation Management</h1>
-                    <p className="text-gray-600 mt-1">View and manage all donations</p>
+                    <h1 className="text-3xl font-bold text-zonta-burgundy">Order Management</h1>
+                    <p className="text-gray-600 mt-1">View and manage all shop orders</p>
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={fetchDonations}
+                        onClick={fetchOrders}
                         className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,10 +181,10 @@ function DonationManagement() {
 
             {/* Statistics */}
             {statistics && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-zonta-burgundy">
                         <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-sm font-semibold text-gray-600">Total Raised</h3>
+                            <h3 className="text-sm font-semibold text-gray-600">Total Revenue</h3>
                             <svg className="w-8 h-8 text-zonta-burgundy opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -194,13 +193,13 @@ function DonationManagement() {
                             ${statistics.total.totalAmount.toFixed(2)}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">
-                            {statistics.total.count} donations
+                            {statistics.total.count} orders
                         </p>
                     </div>
 
                     <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-zonta-gold">
                         <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-sm font-semibold text-gray-600">Average Donation</h3>
+                            <h3 className="text-sm font-semibold text-gray-600">Average Order</h3>
                             <svg className="w-8 h-8 text-zonta-gold opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                             </svg>
@@ -208,7 +207,7 @@ function DonationManagement() {
                         <p className="text-3xl font-bold text-zonta-gold">
                             ${statistics.total.averageAmount.toFixed(2)}
                         </p>
-                        <p className="text-sm text-gray-500 mt-1">per donation</p>
+                        <p className="text-sm text-gray-500 mt-1">per order</p>
                     </div>
 
                     <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
@@ -222,7 +221,7 @@ function DonationManagement() {
                             ${statistics.last30Days.totalAmount.toFixed(2)}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">
-                            {statistics.last30Days.count} donations
+                            {statistics.last30Days.count} orders
                         </p>
                     </div>
                 </div>
@@ -245,7 +244,6 @@ function DonationManagement() {
                             <option value="completed">Completed</option>
                             <option value="pending">Pending</option>
                             <option value="failed">Failed</option>
-                            <option value="refunded">Refunded</option>
                         </select>
                     </div>
                     <div>
@@ -282,14 +280,14 @@ function DonationManagement() {
             {loading ? (
                 <div className="bg-white rounded-xl shadow-lg p-16 text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-zonta-burgundy border-t-transparent"></div>
-                    <p className="mt-4 text-gray-600">Loading donations...</p>
+                    <p className="mt-4 text-gray-600">Loading orders...</p>
                 </div>
-            ) : donations.length === 0 ? (
+            ) : orders.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-lg p-16 text-center">
                     <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                     </svg>
-                    <p className="text-gray-500 text-lg">No donations found</p>
+                    <p className="text-gray-500 text-lg">No orders found</p>
                     {(statusFilter || dateFilter !== 'all') && (
                         <button
                             onClick={() => {
@@ -312,13 +310,16 @@ function DonationManagement() {
                                         Date
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                                        Donor
+                                        Customer
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                                        Email
+                                        Product
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                                        Amount
+                                        Quantity
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                        Total
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
                                         Status
@@ -326,24 +327,31 @@ function DonationManagement() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {donations.map((donation) => (
-                                    <tr key={donation._id} className="hover:bg-gray-50 transition-colors">
+                                {orders.map((order) => (
+                                    <tr key={order._id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {formatDate(donation.createdAt)}
+                                            {formatDate(order.createdAt)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
+                                            <div className="text-sm text-gray-500">{order.customerEmail}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {donation.donorName}
+                                            {order.productName}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {donation.donorEmail}
+                                            {order.quantity}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-lg font-bold text-zonta-burgundy">
-                                                ${donation.amount.toFixed(2)}
+                                                ${order.totalAmount.toFixed(2)}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                                ${order.pricePerUnit.toFixed(2)} each
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            {getStatusBadge(donation.status)}
+                                            {getStatusBadge(order.status)}
                                         </td>
                                     </tr>
                                 ))}
@@ -356,4 +364,4 @@ function DonationManagement() {
     );
 }
 
-export default DonationManagement;
+export default OrderManagement;

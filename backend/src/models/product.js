@@ -72,17 +72,12 @@ const productSchema = new mongoose.Schema({
             default: ''
         }
     }],
-
     
     // Product Status
     status: {
         type: String,
         enum: ['active', 'draft', 'archived'],
         default: 'draft'
-    },
-    featured: {
-        type: Boolean,
-        default: false
     },
     
     // Shipping
@@ -106,14 +101,6 @@ const productSchema = new mongoose.Schema({
         unique: true,
         sparse: true
     },
-    metaTitle: {
-        type: String,
-        maxlength: 60
-    },
-    metaDescription: {
-        type: String,
-        maxlength: 160
-    },
     
     // Stats
     totalSold: {
@@ -136,20 +123,13 @@ const productSchema = new mongoose.Schema({
 // Indexes for better query performance
 productSchema.index({ status: 1, createdAt: -1 });
 productSchema.index({ category: 1, status: 1 });
-productSchema.index({ featured: 1, status: 1 });
-productSchema.index({ name: 'text', description: 'text', tags: 'text' });
+productSchema.index({ name: 'text', description: 'text' });
 
 // Virtual for stock status
 productSchema.virtual('inStock').get(function() {
     if (!this.trackInventory) return true;
     if (this.allowBackorder) return true;
     return this.inventory > 0;
-});
-
-// Virtual for discount percentage
-productSchema.virtual('discountPercentage').get(function() {
-    if (!this.compareAtPrice || this.compareAtPrice <= this.price) return 0;
-    return Math.round(((this.compareAtPrice - this.price) / this.compareAtPrice) * 100);
 });
 
 // Generate slug from name
@@ -159,11 +139,6 @@ productSchema.pre('save', function(next) {
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, '');
-    }
-    
-    // Set featured image to first image if not set
-    if (this.images.length > 0 && !this.featuredImage) {
-        this.featuredImage = this.images[0].url;
     }
     
     next();
@@ -199,15 +174,6 @@ productSchema.statics.getActiveProducts = function() {
     return this.find({ status: 'active' }).sort({ createdAt: -1 });
 };
 
-// Static method to get featured products
-productSchema.statics.getFeaturedProducts = function() {
-    return this.find({ status: 'active', featured: true }).sort({ createdAt: -1 });
-};
-
 const Product = mongoose.model('Product', productSchema);
 
-export default Product;
-
-
-// description and short description can be shortened 
-// compareAtPrice is not needed 
+export default Product; 
