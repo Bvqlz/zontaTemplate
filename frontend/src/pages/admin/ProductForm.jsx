@@ -23,9 +23,7 @@ const ProductForm = () => {
         allowBackorder: false,
         sku: '',
         category: 'Other',
-        tags: '',
         status: 'draft',
-        featured: false,
         weight: '',
         weightUnit: 'lb',
         requiresShipping: true
@@ -47,18 +45,14 @@ const ProductForm = () => {
                     allowBackorder: product.allowBackorder || false,
                     sku: product.sku || '',
                     category: product.category || 'Other',
-                    tags: product.tags ? product.tags.join(', ') : '',
                     status: product.status || 'draft',
-                    featured: product.featured || false,
                     weight: product.weight || '',
                     weightUnit: product.weightUnit || 'lb',
                     requiresShipping: product.requiresShipping !== undefined ? product.requiresShipping : true
                 });
                 
                 // Set existing image preview
-                if (product.featuredImage) {
-                    setImagePreview(product.featuredImage);
-                } else if (product.images && product.images.length > 0) {
+                if (product.images && product.images.length > 0) {
                     setImagePreview(product.images[0].url);
                 }
             }
@@ -142,18 +136,11 @@ const ProductForm = () => {
             submitData.append('sku', formData.sku);
             submitData.append('category', formData.category);
             submitData.append('status', formData.status);
-            submitData.append('featured', formData.featured);
             submitData.append('requiresShipping', formData.requiresShipping);
             submitData.append('weightUnit', formData.weightUnit);
             
             if (formData.weight) {
                 submitData.append('weight', parseFloat(formData.weight));
-            }
-            
-            // Handle tags
-            if (formData.tags) {
-                const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(t => t);
-                tagsArray.forEach(tag => submitData.append('tags[]', tag));
             }
             
             // Append image file if present

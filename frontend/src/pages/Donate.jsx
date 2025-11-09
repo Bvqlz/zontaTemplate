@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const PRESET_AMOUNTS = [25, 50, 100, 250, 500, 1000];
 
 
 function Donate() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     
@@ -22,6 +23,43 @@ function Donate() {
         isRecurring: false,
         frequency: 'one-time'
     });
+
+    // Handle canceled checkout - mark donation as failed
+    useEffect(() => {
+        const canceled = searchParams.get('canceled');
+        const donationId = searchParams.get('donation_id');
+
+        if (canceled === 'true' && donationId) {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            console.log('Canceling donation:', donationId);
+            console.log('API URL:', `${apiUrl}/api/donations/cancel/${donationId}`);
+            
+            // Call backend to mark donation as failed
+            fetch(`${apiUrl}/api/donations/cancel/${donationId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(async (response) => {
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok) {
+                    console.log('Donation marked as canceled');
+                } else {
+                    console.error('Failed to cancel donation:', data);
+                }
+                
+                // Clean up URL parameters
+                navigate('/donate', { replace: true });
+            })
+            .catch(err => {
+                console.error('Error canceling donation:', err);
+            });
+        }
+    }, [searchParams, navigate]);
 
     const handleAmountSelect = (amount) => {
         setSelectedAmount(amount);

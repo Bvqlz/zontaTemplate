@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // uses the Stripe SDK to create a checkout session
 export const createCheckoutSession = async (req, res) => {
     try {
-        const { amount, donorName, donorEmail, donorPhone,message, isRecurring, frequency } = req.body;
+        const { amount, donorName, donorEmail, donorPhone, message, isRecurring, frequency } = req.body;
 
         // Validate required fields
         if (!amount || !donorName || !donorEmail) {
@@ -38,7 +38,6 @@ export const createCheckoutSession = async (req, res) => {
         });
 
         // Determine the purpose name for Stripe. we would just change this to be something like donation 
-        const purposeName = purpose === 'Other' && customPurpose ? customPurpose : purpose;
 
         // Create Stripe Checkout Session from stripes premade checkout flow
         // success_url will redirect to frontend with session id to fetch a donation status which will show a success page.
@@ -64,11 +63,10 @@ export const createCheckoutSession = async (req, res) => {
             ],
             mode: 'payment',
             success_url: `${process.env.FRONTEND_URL}/donate/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_URL}/donate`,
+            cancel_url: `${process.env.FRONTEND_URL}/donate?canceled=true&donation_id=${donation._id}`,
             customer_email: donorEmail,
             metadata: {
                 donationId: donation._id.toString(),
-                purpose: purposeName,
                 donorName
             },
             // Enable Stripe to send receipt
@@ -97,32 +95,31 @@ export const createCheckoutSession = async (req, res) => {
 };
 
 // Stripe Webhook Handler
-// what a webhook is, is a way for stripe to notify our server about events that happen in our stripe account
-// helpful since we dont have to continuously poll stripe to check for payment status
-// think of it like an event driven api 
+// Stripe Webhook Handler
+// Stripe sends multiple events for each transaction (payment_intent.created, charge.succeeded, etc.)
+// We only handle the events we care about for donation status tracking
 
 export const handleWebhook = async (req, res) => {
-    const sig = req.headers['stripe-signature']; // a stripe signature header sent by stripe to verify the webhook
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET; // uses our webhook secret to verify the webhook
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    let event; // an event can be anything from a successful payment to a failed payment
+    let event;
 
     try {
-        // Verify webhook signature
-        // we construct the event using the stripe sdk method constructEvent
+        // Verify webhook signature to ensure request is from Stripe
         event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (err) {
         console.error('Webhook signature verification failed:', err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // Handle the event by using a switch case for different event types
+    // Handle the specific events we care about
     try {
         switch (event.type) {
             case 'checkout.session.completed':
-                const session = event.data.object; // thios event data object contains all the info about the completed checkout session
+                const session = event.data.object;
                 
-                // Find donation by session ID
+                // Find donation by session ID and update status
                 const donation = await Donation.findOne({ stripeSessionId: session.id });
                 
                 if (donation) {
@@ -138,19 +135,22 @@ export const handleWebhook = async (req, res) => {
 
             case 'payment_intent.payment_failed':
                 const failedPayment = event.data.object;
-                const failedDonation = await Donation.findOne({ 
+                let failedDonation = await Donation.findOne({ 
                     stripePaymentIntentId: failedPayment.id 
                 });
+                
+                if (!failedDonation && failedPayment.metadata?.donationId) {
+                    failedDonation = await Donation.findById(failedPayment.metadata.donationId);
+                }
                 
                 if (failedDonation) {
                     failedDonation.status = 'failed';
                     await failedDonation.save();
-                    console.log(`Donation ${failedDonation._id} marked as failed`);
+                    console.log(`Donation ${failedDonation._id} marked as failed (payment failed)`);
                 }
                 break;
 
             case 'checkout.session.expired':
-                // Handle abandoned checkout sessions
                 const expiredSession = event.data.object;
                 const expiredDonation = await Donation.findOne({ 
                     stripeSessionId: expiredSession.id 
@@ -162,15 +162,67 @@ export const handleWebhook = async (req, res) => {
                     console.log(`Donation ${expiredDonation._id} marked as failed (session expired)`);
                 }
                 break;
+            
+            case 'checkout.session.async_payment_failed':
+                const asyncFailedSession = event.data.object;
+                const asyncFailedDonation = await Donation.findOne({ 
+                    stripeSessionId: asyncFailedSession.id 
+                });
+                
+                if (asyncFailedDonation) {
+                    asyncFailedDonation.status = 'failed';
+                    await asyncFailedDonation.save();
+                    console.log(`Donation ${asyncFailedDonation._id} marked as failed (async payment failed)`);
+                }
+                break;
 
+            // Ignore other Stripe events (charge.succeeded, payment_intent.created, etc.)
             default:
-                console.log(`Unhandled event type: ${event.type}`);
+                // Silently ignore unhandled events
+                break;
         }
 
         res.json({ received: true });
     } catch (error) {
         console.error('Error handling webhook:', error);
         res.status(500).json({ error: 'Webhook handler failed' });
+    }
+};
+
+// Cancel/mark donation as failed when user cancels checkout
+export const cancelDonation = async (req, res) => {
+    try {
+        console.log('Cancel donation endpoint hit');
+        const { donationId } = req.params;
+        console.log('Donation ID:', donationId);
+
+        const donation = await Donation.findById(donationId);
+        console.log('Donation found:', donation ? `Yes (${donation._id})` : 'No');
+
+        if (!donation) {
+            console.log('Donation not found in database');
+            return res.status(404).json({ error: 'Donation not found' });
+        }
+
+        console.log('Current donation status:', donation.status);
+
+        // Only cancel if it's still pending
+        if (donation.status === 'pending') {
+            donation.status = 'failed';
+            await donation.save();
+            console.log(`Donation ${donation._id} marked as failed (user canceled checkout)`);
+        } else {
+            console.log(`Donation status is ${donation.status}, not updating`);
+        }
+
+        res.json({ 
+            success: true,
+            message: 'Donation canceled',
+            donation 
+        });
+    } catch (error) {
+        console.error('Error canceling donation:', error);
+        res.status(500).json({ error: 'Failed to cancel donation' });
     }
 };
 
@@ -287,7 +339,10 @@ export const getDonationBySessionId = async (req, res) => {
 // why do we have two stats endpoints? one in the getAllDonations function and another here?
 export const getDonationStats = async (req, res) => {
     try {
-        // Total donations
+        // Get all donations count
+        const totalCount = await Donation.countDocuments();
+        
+        // Total completed donations
         const totalStats = await Donation.aggregate([
             { $match: { status: 'completed' } },
             {
@@ -299,7 +354,6 @@ export const getDonationStats = async (req, res) => {
                 }
             }
         ]);
-
 
         // Recent donations (last 30 days)
         const thirtyDaysAgo = new Date();
@@ -321,15 +375,79 @@ export const getDonationStats = async (req, res) => {
             }
         ]);
 
+        // Status breakdown
+        const statusBreakdown = await Donation.aggregate([
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const statusObj = statusBreakdown.reduce((acc, item) => {
+            acc[item._id] = item.count;
+            return acc;
+        }, {});
+
+        const stats = totalStats[0] || { totalAmount: 0, count: 0, averageAmount: 0 };
+        const recent = recentStats[0] || { totalAmount: 0, count: 0 };
+
         res.json({
-            total: totalStats[0] || { totalAmount: 0, count: 0, averageAmount: 0 },
-            last30Days: recentStats[0] || { totalAmount: 0, count: 0 }
+            totalCount: totalCount,
+            totalAmount: stats.totalAmount,
+            averageAmount: stats.averageAmount,
+            completedCount: stats.count,
+            last30Days: {
+                totalAmount: recent.totalAmount,
+                count: recent.count
+            },
+            statusBreakdown: {
+                completed: statusObj.completed || 0,
+                pending: statusObj.pending || 0,
+                failed: statusObj.failed || 0
+            }
         });
 
     } catch (error) {
         console.error('Error fetching donation stats:', error);
         res.status(500).json({ 
             error: 'Failed to fetch donation statistics',
+            details: error.message 
+        });
+    }
+};
+
+// Clean up old pending/failed donations (Admin or scheduled task)
+// This is a backup cleanup in case webhooks fail to update statuses
+export const cleanupOldDonations = async (req, res) => {
+    try {
+        // Mark pending donations older than 24 hours as failed
+        const oneDayAgo = new Date();
+        oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+        
+        const result = await Donation.updateMany(
+            { 
+                status: 'pending',
+                createdAt: { $lt: oneDayAgo }
+            },
+            { 
+                $set: { status: 'failed' }
+            }
+        );
+
+        console.log(`Cleaned up ${result.modifiedCount} old pending donations`);
+
+        res.json({
+            success: true,
+            message: `Updated ${result.modifiedCount} old pending donations to failed status`,
+            count: result.modifiedCount
+        });
+
+    } catch (error) {
+        console.error('Error cleaning up donations:', error);
+        res.status(500).json({ 
+            error: 'Failed to cleanup donations',
             details: error.message 
         });
     }
@@ -351,11 +469,11 @@ export const exportDonations = async (req, res) => {
         const donations = await Donation.find(query).sort({ createdAt: -1 }).lean();
 
         // Create CSV content
-        const csvHeader = 'Date,Donor Name,Email,Amount,Purpose,Status,Message\n';
+        const csvHeader = 'Date,Donor Name,Email,Amount,Status,Message\n';
         const csvRows = donations.map(d => {
             const date = new Date(d.createdAt).toLocaleDateString();
-            const name = d.isAnonymous ? 'Anonymous' : d.donorName;
-            const email = d.isAnonymous ? '' : d.donorEmail;
+            const name = d.donorName || 'Anonymous';
+            const email = d.donorEmail || '';
             const message = (d.message || '').replace(/,/g, ';').replace(/\n/g, ' ');
             return `${date},"${name}","${email}",${d.amount},"${d.status}","${message}"`;
         }).join('\n');

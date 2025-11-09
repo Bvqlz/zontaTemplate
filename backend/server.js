@@ -19,15 +19,17 @@ const corsOptions = {
     credentials: true
 }
 
-app.use(cors());
+// Stripe webhooks need raw body - MUST come before any body parsing middleware
+// Apply CORS to webhook routes first, then raw body parser
+app.use('/api/donations/webhook', cors(), express.raw({ type: 'application/json' }));
+app.use('/api/products/webhook', cors(), express.raw({ type: 'application/json' }));
 
-// Stripe webhooks need raw body
-// what express.raw means is that the body of the request will be parsed as a raw Buffer for only these specific routes
-// we take this raw buffer and pass it to the stripe library to verify the signature using handleWebhook and handleProductWebhook
-app.post('/api/donations/webhook', express.raw({ type: 'application/json' }), handleWebhook);
-app.post('/api/products/webhook', express.raw({ type: 'application/json' }), handleProductWebhook);
+// Register webhook routes
+app.post('/api/donations/webhook', handleWebhook);
+app.post('/api/products/webhook', handleProductWebhook);
 
-// JSON parsing for all other routes
+// CORS and body parsing for all other routes
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // just means parsing for URL-encoded data like form submissions
 

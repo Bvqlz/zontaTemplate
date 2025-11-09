@@ -38,6 +38,7 @@ import MemberDetail from "./pages/admin/MemberDetail.jsx";
 import DonationManagement from "./pages/admin/DonationManagement.jsx";
 import ProductManagement from "./pages/admin/ProductManagement.jsx";
 import ProductForm from "./pages/admin/ProductForm.jsx";
+import OrderManagement from "./pages/admin/OrderManagement.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -74,6 +75,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/admin/members" element={<MemberManagement />} />
           <Route path="/admin/members/:id" element={<MemberDetail />} />
           <Route path="/admin/donations" element={<DonationManagement />} />
+          <Route path="/admin/orders" element={<OrderManagement />} />
           <Route path="/admin/products" element={<ProductManagement />} />
           <Route path="/admin/products/create" element={<ProductForm />} />
           <Route path="/admin/products/edit/:id" element={<ProductForm />} />
