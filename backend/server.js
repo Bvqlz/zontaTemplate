@@ -135,4 +135,7 @@ process.on('unhandledRejection', (reason, promise) => {
     process.exit(1);
 });
 
+//need to run .\stripe listen --forward-to localhost:3000/api/donations/webhook --forward-to localhost:3000/api/products/webhook
+//at the start of the server to test webhooks locally
+
 export default app;

@@ -191,10 +191,10 @@ function DonationManagement() {
                             </svg>
                         </div>
                         <p className="text-3xl font-bold text-zonta-burgundy">
-                            ${statistics.total.totalAmount.toFixed(2)}
+                            ${statistics.totalAmount.toFixed(2)}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">
-                            {statistics.total.count} donations
+                            {statistics.totalCount} donations
                         </p>
                     </div>
 
@@ -206,7 +206,7 @@ function DonationManagement() {
                             </svg>
                         </div>
                         <p className="text-3xl font-bold text-zonta-gold">
-                            ${statistics.total.averageAmount.toFixed(2)}
+                            ${statistics.averageAmount.toFixed(2)}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">per donation</p>
                     </div>
@@ -315,9 +315,6 @@ function DonationManagement() {
                                         Donor
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                                        Email
-                                    </th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
                                         Amount
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
@@ -332,10 +329,8 @@ function DonationManagement() {
                                             {formatDate(donation.createdAt)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {donation.donorName}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {donation.donorEmail}
+                                            <div className="text-sm font-medium text-gray-900">{donation.donorName}</div>
+                                            <div className="text-sm text-gray-500">{donation.donorEmail}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-lg font-bold text-zonta-burgundy">

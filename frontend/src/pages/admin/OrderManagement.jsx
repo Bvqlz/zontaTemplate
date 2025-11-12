@@ -190,10 +190,10 @@ function OrderManagement() {
                             </svg>
                         </div>
                         <p className="text-3xl font-bold text-zonta-burgundy">
-                            ${statistics.total.totalAmount.toFixed(2)}
+                            ${statistics.totalRevenue.toFixed(2)}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">
-                            {statistics.total.count} orders
+                            {statistics.completedCount} orders
                         </p>
                     </div>
 
@@ -205,7 +205,7 @@ function OrderManagement() {
                             </svg>
                         </div>
                         <p className="text-3xl font-bold text-zonta-gold">
-                            ${statistics.total.averageAmount.toFixed(2)}
+                            ${statistics.averageOrder.toFixed(2)}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">per order</p>
                     </div>
