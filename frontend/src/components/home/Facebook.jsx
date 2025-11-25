@@ -1,8 +1,11 @@
 // src/components/Facebook.jsx
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { motion, useInView } from "framer-motion";
 
 export default function Facebook() {
   const [selectedImage, setSelectedImage] = useState(null);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-50px" });
 
   const images = [
     { src: "/src/assets/zonta1.png", alt: "Zonta Event 1" },
@@ -11,28 +14,34 @@ export default function Facebook() {
   ];
 
   return (
-    <section id="about" className="section-padding bg-white">
+    <section ref={ref} id="about" className="section-padding bg-gray-50">
       <div className="container-custom">
         {/* Header section */}
-        <div className="text-center mb-16">
-          <div className="flex justify-center items-center gap-4 mb-6">
-            <h3 className="text-4xl md:text-5xl font-bold text-zonta-burgundy">
-              Follow Us on Social Media
-            </h3>
-          </div>
+        <motion.div
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-zonta-burgundy mb-4">
+            Follow Us on Social Media
+          </h2>
           <div className="w-24 h-1 bg-zonta-gold mx-auto mb-6"></div>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Stay connected with our latest events, initiatives, and community impact
           </p>
-        </div>
+        </motion.div>
 
         {/* Gallery Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {images.map((image, index) => (
-            <div
+            <motion.div
               key={image.src}
               className="card overflow-hidden cursor-pointer group"
               onClick={() => setSelectedImage(image.src)}
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.4, delay: index * 0.1 }}
             >
               <div className="relative overflow-hidden">
                 <img
@@ -41,7 +50,7 @@ export default function Facebook() {
                   className="w-full h-80 object-cover transform group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 

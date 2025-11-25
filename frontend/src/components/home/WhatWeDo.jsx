@@ -42,7 +42,7 @@ export default function WhatWeDo() {
       ],
       bgColor: "bg-zonta-gold",
       iconColor: "text-zonta-burgundy",
-      link: "advocacy"
+      link: "who-we-are"
     },
     {
       title: "Donations",
@@ -70,9 +70,9 @@ export default function WhatWeDo() {
         {/* Section Header */}
         <motion.div 
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
           <h2 className="section-title">What We Do</h2>
           <div className="w-24 h-1 bg-zonta-gold mx-auto mb-6"></div>
@@ -87,9 +87,9 @@ export default function WhatWeDo() {
             <motion.div
               key={card.title}
               className="card-feature group"
-              initial={{ opacity: 0, y: 50 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: index * 0.2 }}
+              transition={{ duration: 0.4, delay: index * 0.1 }}
             >
               {/* Icon with Solid Background */}
               <div className={`w-20 h-20 mx-auto mb-6 rounded-full ${card.bgColor} flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform duration-300 ${card.iconColor}`}>
@@ -107,16 +107,13 @@ export default function WhatWeDo() {
               </p>
 
               {/* Highlights */}
-              <ul className="space-y-3 mb-6">
+              <div className="space-y-3 mb-6">
                 {card.highlights.map((highlight, i) => (
-                  <li key={i} className="flex items-start text-sm text-gray-700">
-                    <svg className="w-5 h-5 text-zonta-gold mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>{highlight}</span>
-                  </li>
+                  <p key={i} className="text-sm text-gray-700 text-center">
+                    {highlight}
+                  </p>
                 ))}
-              </ul>
+              </div>
 
               {/* Learn More Link */}
               <div className="text-center">
@@ -130,32 +127,6 @@ export default function WhatWeDo() {
             </motion.div>
           ))}
         </div>
-
-        {/* Bottom CTA */}
-        <motion.div 
-          className="text-center mt-16"
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 0.8 }}
-        >
-          <p className="text-xl text-gray-700 mb-6">
-            Ready to make a difference with us?
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a 
-              href="/join"
-              className="btn-primary inline-block"
-            >
-              Become a Member
-            </a>
-            <a 
-              href="/donate"
-              className="btn-outline inline-block"
-            >
-              Support Our Mission
-            </a>
-          </div>
-        </motion.div>
       </div>
     </section>
   );

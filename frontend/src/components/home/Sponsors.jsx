@@ -34,13 +34,13 @@ export default function Sponsor() {
   ];
 
   return (
-    <section className="section-padding bg-zonta-burgundy">
+    <section className="section-padding bg-zonta-burgundy shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1)]">
       <div className="container-custom">
         {/* Header */}
         <div className="text-center mb-12">
-          <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Our Community Partners
-          </h3>
+          </h2>
           <div className="w-24 h-1 bg-zonta-gold mx-auto mb-6"></div>
           <p className="text-xl text-gray-200 max-w-3xl mx-auto">
             Proud to support these organizations making a difference in women's lives

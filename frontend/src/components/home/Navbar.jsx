@@ -27,8 +27,8 @@ export default function Navbar() {
               </Link>
             </li>
             <li>
-              <Link to="/advocacy" className="hover:text-zonta-gold transition-colors duration-300">
-                ADVOCACY
+              <Link to="/who-we-are" className="hover:text-zonta-gold transition-colors duration-300">
+                WHO WE ARE
               </Link>
             </li>
             <li>

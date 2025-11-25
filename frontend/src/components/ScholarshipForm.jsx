@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { scholarshipAPI } from '../utils/apiService';
 
-function ScholarshipForm() {
+function ScholarshipForm({ scholarshipId }) {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
-        phone: ''
+        phone: '',
+        scholarshipListingId: scholarshipId || '' // Store the scholarship listing ID if provided
     });
     
     const [files, setFiles] = useState([]);

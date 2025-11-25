@@ -66,25 +66,25 @@ export default function ImpactStats() {
   return (
     <section 
       ref={ref}
-      className="section-padding bg-gradient-to-br from-zonta-navy via-zonta-navy-light to-zonta-navy-dark text-white relative overflow-hidden"
+      className="section-padding bg-gray-50 relative overflow-hidden"
     >
       {/* Subtle Background Pattern */}
       <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full filter blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full filter blur-3xl"></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-zonta-gold rounded-full filter blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-zonta-burgundy rounded-full filter blur-3xl"></div>
       </div>
 
       <div className="container-custom relative z-10">
         {/* Section Header */}
         <motion.div 
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
-          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">Our Impact</h2>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-zonta-burgundy">Our Impact</h2>
           <div className="w-24 h-1 bg-zonta-gold mx-auto mb-6"></div>
-          <p className="text-xl md:text-2xl text-gray-200 max-w-3xl mx-auto">
+          <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
             Together, we're creating lasting change in our community and beyond
           </p>
         </motion.div>
@@ -104,16 +104,16 @@ export default function ImpactStats() {
         {/* Bottom Message */}
         <motion.div 
           className="text-center mt-16"
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.8 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <p className="text-xl mb-8 text-gray-200">
+          <p className="text-xl mb-8 text-gray-600">
             Every donation and every volunteer hour makes a difference
           </p>
           <a 
             href="/join"
-            className="bg-zonta-gold hover:bg-zonta-gold-dark text-white text-lg px-8 py-4 rounded-lg font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-block"
+            className="bg-zonta-burgundy hover:bg-zonta-burgundy-dark text-white text-lg px-8 py-4 rounded-lg font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-block"
           >
             Join Our Mission
           </a>
@@ -128,7 +128,7 @@ function StatCard({ stat, index, isInView }) {
 
   return (
     <motion.div
-      className="text-center p-6 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 hover:bg-white/20 transition-all duration-300"
+      className="text-center p-8 bg-gradient-to-br from-zonta-burgundy to-zonta-burgundy-dark rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
       initial={{ opacity: 0, scale: 0.8 }}
       animate={isInView ? { opacity: 1, scale: 1 } : {}}
       transition={{ duration: 0.6, delay: index * 0.1 }}
@@ -144,7 +144,7 @@ function StatCard({ stat, index, isInView }) {
       </div>
 
       {/* Description */}
-      <div className="text-sm text-gray-300">
+      <div className="text-sm text-gray-200">
         {stat.description}
       </div>
     </motion.div>

@@ -6,7 +6,7 @@ export default function Hero() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center justify-center text-center text-white px-4 overflow-hidden"
+      className="relative min-h-screen flex items-center justify-center text-center text-white px-4 overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]"
     >
       {/* Background Image */}
       <div
@@ -91,12 +91,6 @@ export default function Hero() {
           >
             Support Our Cause
           </a>
-          <Link 
-            to="/events"
-            className="border-2 border-white hover:bg-white hover:text-zonta-burgundy text-white text-lg px-8 py-4 rounded-lg font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 min-w-[200px]"
-          >
-            View Events
-          </Link>
         </motion.div>
       </motion.div>
     </section>

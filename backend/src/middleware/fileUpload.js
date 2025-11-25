@@ -86,6 +86,71 @@ const productImageUpload = multer({
 
 export const uploadProductImage = productImageUpload.single('image');
 
+// Middleware for scholarship listings - handles both image and optional attachment
+// Use dynamic params function to handle different file types
+const scholarshipListingStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+        const timestamp = Date.now();
+        const originalName = file.originalname.replace(/\.[^/.]+$/, '');
+        
+        if (file.fieldname === 'image') {
+            return {
+                folder: 'zonta-scholarship-listings',
+                allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+                resource_type: 'image',
+                transformation: [{ width: 1200, height: 800, crop: 'limit', quality: 'auto' }],
+                public_id: `image-${originalName}-${timestamp}`
+            };
+        } else if (file.fieldname === 'attachment') {
+            return {
+                folder: 'zonta-scholarship-listings/attachments',
+                allowed_formats: ['pdf', 'doc', 'docx'],
+                resource_type: 'raw',
+                public_id: `attachment-${originalName}-${timestamp}`
+            };
+        }
+    }
+});
+
+const scholarshipListingFileFilter = (req, file, cb) => {
+    if (file.fieldname === 'image') {
+        const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowedImageTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid image type. Only JPG, JPEG, PNG, and WEBP are allowed.'), false);
+        }
+    } else if (file.fieldname === 'attachment') {
+        const allowedDocTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+        if (allowedDocTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid attachment type. Only PDF, DOC, and DOCX are allowed.'), false);
+        }
+    } else {
+        cb(new Error('Unexpected field name.'), false);
+    }
+};
+
+const scholarshipListingUpload = multer({
+    storage: scholarshipListingStorage,
+    fileFilter: scholarshipListingFileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5 MB limit
+        files: 2 // Max 2 files (1 image + 1 optional attachment)
+    }
+});
+
+export const uploadMultipleFiles = scholarshipListingUpload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'attachment', maxCount: 1 }
+]);
+
 export const handleMulterErr = (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {

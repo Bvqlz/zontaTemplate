@@ -15,11 +15,13 @@ import Contact from "./pages/Contact.jsx";
 import Join from "./pages/Join.jsx";
 import EventsPage from "./pages/Events.jsx";
 import Scholarship from "./pages/Scholarship.jsx";
+import ScholarshipApply from "./pages/ScholarshipApply.jsx";
 import Login from "./pages/Login.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import FAQ from "./pages/FAQ.jsx";
 import Impacts from "./pages/Impacts.jsx";
-import Advocacy from "./pages/Advocacy.jsx";
+import WWR from "./pages/WhoWeAre.jsx";
+import ZontaCentennial from "./pages/ZontaCentennial.jsx";
 import Donate from "./pages/Donate.jsx";
 import DonateSuccess from "./pages/DonateSuccess.jsx";
 import Shop from "./pages/Shop.jsx";
@@ -30,6 +32,8 @@ import ShopSuccess from "./pages/ShopSuccess.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import ScholarshipManagement from "./pages/admin/ScholarshipManagement.jsx";
 import ScholarshipDetail from "./pages/admin/ScholarshipDetail.jsx";
+import ScholarshipListingManagement from "./pages/admin/ScholarshipListingManagement.jsx";
+import ScholarshipListingForm from "./pages/admin/ScholarshipListingForm.jsx";
 import EventManagement from "./pages/admin/EventManagement.jsx";
 import EventCreate from "./pages/admin/EventCreate.jsx";
 import EventEdit from "./pages/admin/EventEdit.jsx";
@@ -51,9 +55,11 @@ createRoot(document.getElementById("root")).render(
           <Route path="/join" element={<Join />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/scholarship" element={<Scholarship />} />
+          <Route path="/scholarship/apply" element={<ScholarshipApply />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/impacts" element={<Impacts />} />
-          <Route path="/advocacy" element={<Advocacy />} />
+          <Route path="/who-we-are" element={<WWR />} />
+          <Route path="/centennial" element={<ZontaCentennial />} />
           <Route path="/donate" element={<Donate />} />
           <Route path="/donate/success" element={<DonateSuccess />} />
           <Route path="/shop" element={<Shop />} />
@@ -69,6 +75,9 @@ createRoot(document.getElementById("root")).render(
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/scholarships" element={<ScholarshipManagement />} />
           <Route path="/admin/scholarships/:id" element={<ScholarshipDetail />} />
+          <Route path="/admin/scholarship-listings" element={<ScholarshipListingManagement />} />
+          <Route path="/admin/scholarship-listings/create" element={<ScholarshipListingForm />} />
+          <Route path="/admin/scholarship-listings/edit/:id" element={<ScholarshipListingForm />} />
           <Route path="/admin/events" element={<EventManagement />} />
           <Route path="/admin/events/create" element={<EventCreate />} />
           <Route path="/admin/events/edit/:id" element={<EventEdit />} />

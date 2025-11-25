@@ -3,6 +3,7 @@ import cors from 'cors';
 import memberRoutes from './src/routes/members.js';
 import eventRoutes from './src/routes/events.js';
 import scholarshipRoutes from './src/routes/scholarships.js';
+import scholarshipListingRoutes from './src/routes/scholarshipListings.js';
 import authRoutes from './src/routes/auth.js';
 import donationRoutes, { handleWebhook } from './src/routes/donations.js';
 import productRoutes, { handleProductWebhook } from './src/routes/products.js';
@@ -69,6 +70,8 @@ app.use('/api/members', memberRoutes);
 app.use('/api/events', eventRoutes);
 
 app.use('/api/scholarship', scholarshipRoutes);
+
+app.use('/api/scholarship-listings', scholarshipListingRoutes);
 
 app.use('/api/auth', authRoutes);
 
