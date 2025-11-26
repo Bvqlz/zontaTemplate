@@ -99,7 +99,6 @@ const scholarshipListingSchema = new mongoose.Schema({
 // Indexes
 scholarshipListingSchema.index({ status: 1 });
 scholarshipListingSchema.index({ deadline: 1 });
-scholarshipListingSchema.index({ slug: 1 });
 
 // Virtual to check if scholarship is still open
 scholarshipListingSchema.virtual('isOpen').get(function() {

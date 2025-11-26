@@ -100,24 +100,6 @@ export default function ImpactStats() {
             />
           ))}
         </div>
-
-        {/* Bottom Message */}
-        <motion.div 
-          className="text-center mt-16"
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <p className="text-xl mb-8 text-gray-600">
-            Every donation and every volunteer hour makes a difference
-          </p>
-          <a 
-            href="/join"
-            className="bg-zonta-burgundy hover:bg-zonta-burgundy-dark text-white text-lg px-8 py-4 rounded-lg font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-block"
-          >
-            Join Our Mission
-          </a>
-        </motion.div>
       </div>
     </section>
   );

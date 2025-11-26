@@ -13,8 +13,33 @@ export default function FAQ() {
 
   const faqItems = [
     {
+      question: "What foundation does Zonta support?",
+      answer: (
+        <>
+          Zonta supports the <strong>Zonta Foundation for Women</strong>, the charitable arm of Zonta International.
+          Since 1923, the Foundation has funded programs that empower women and girls globally through education,
+          health, economic opportunity, and leadership development. It supports initiatives like scholarships,
+          fellowships, and service projects focused on ending gender-based violence and promoting gender equality.
+          <br /><br />
+          Learn more about the foundation and its impact{" "}
+          <a
+            href="https://www.zonta.org/Web/Web/Your_Support/The_Foundation.aspx"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-yellow-700 hover:underline font-semibold"
+          >
+            here
+          </a>.
+        </>
+      ),
+    },
+    {
       question: "What is Zonta International?",
       answer: "Zonta International is a global organization of professionals empowering women worldwide through service and advocacy. With over 28,000 members in 61 countries, we work to advance the status of women politically, economically, and professionally."
+    },
+    {
+      question: "What is the mission of Zonta?",
+      answer: "Zonta International is a leading global organization of individuals working together to build a better world for women and girls. We envision a world in which women's rights are recognized as human rights and every woman is able to achieve her full potential."
     },
     {
       question: "Who can join Zonta Club of Naples?",
@@ -26,7 +51,7 @@ export default function FAQ() {
     },
     {
       question: "What are the membership dues?",
-      answer: "Annual membership dues are $150 for active members, $75 for young professionals (under 35) and retired members, and $25 for student members. Dues support both local club activities and Zonta International programs."
+      answer: "New members pay a one-time fee of $170 for the first year. After that, the annual membership renewal is $148 per year."
     },
     {
       question: "What kind of service projects does the club undertake?",

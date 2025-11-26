@@ -69,7 +69,6 @@ const orderSchema = new mongoose.Schema({
 // Indexes for faster queries
 orderSchema.index({ customerEmail: 1 });
 orderSchema.index({ status: 1 });
-orderSchema.index({ stripeSessionId: 1 });
 orderSchema.index({ createdAt: -1 });
 
 

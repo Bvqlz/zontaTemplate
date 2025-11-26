@@ -53,13 +53,21 @@ export const eventAPI = {
 
     //protected
     createEvent: async (data) => {
-        const response = await api.post('/api/events', data);
+        const response = await api.post('/api/events', data, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
         return response.data;
     },
 
     //protected
     updateEvent: async (id, data) => {
-        const response = await api.put(`/api/events/${id}`, data);
+        const response = await api.put(`/api/events/${id}`, data, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
         return response.data;
     },
 
@@ -99,6 +107,42 @@ export const scholarshipAPI = {
 
     updateScholarship: async (id, data) => {
         const response = await api.put(`/api/scholarship/${id}`, data);
+        return response.data;
+    }
+};
+
+export const scholarshipListingAPI = {
+    getAllListings: async (status) => {
+        const response = await api.get('/api/scholarship-listings', { params: { status } });
+        return response.data;
+    },
+
+    getListingById: async (id) => {
+        const response = await api.get(`/api/scholarship-listings/${id}`);
+        return response.data;
+    },
+
+    // Admin routes
+    createListing: async (formData) => {
+        const response = await api.post('/api/scholarship-listings/admin', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return response.data;
+    },
+
+    updateListing: async (id, formData) => {
+        const response = await api.put(`/api/scholarship-listings/admin/${id}`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return response.data;
+    },
+
+    deleteListing: async (id) => {
+        const response = await api.delete(`/api/scholarship-listings/admin/${id}`);
         return response.data;
     }
 };

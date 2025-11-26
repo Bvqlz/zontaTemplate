@@ -49,15 +49,33 @@ const eventSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    image: {
+        url: {
+            type: String
+        },
+        publicId: {
+            type: String
+        },
+        alt: {
+            type: String,
+            default: ''
+        }
+    },
     isActive: {
         type: Boolean,
         default: true
+    },
+    status: {
+        type: String,
+        enum: ['active', 'draft', 'archived'],
+        default: 'draft'
     }
 }, { timestamps: true });
 
 eventSchema.index({ data: 1 }); //ascending order
 eventSchema.index({ type: 1 }); //ascending order
 eventSchema.index({ isActive: 1 }); //ascending order
+eventSchema.index({ status: 1 }); //ascending order
 
 eventSchema.virtual('isUpcoming').get(function() {
     return this.date > new Date();
@@ -72,20 +90,44 @@ eventSchema.virtual('isPast').get(function() {
 eventSchema.set('toJSON', { virtuals: true });
 eventSchema.set('toObject', { virtuals: true });
 
-//basically saying that we want to find a data that is today or in the future and is active meaning it hasnt been cancelled or deleted
+// Pre-find middleware to automatically archive past active events
+// This runs before any find query and updates past events
+eventSchema.pre(/^find/, async function(next) {
+    const now = new Date();
+    
+    // Archive past active events
+    await this.model.updateMany(
+        {
+            date: { $lt: now },
+            status: 'active'
+        },
+        {
+            $set: { status: 'archived' }
+        }
+    );
+    
+    next();
+});
+
+//basically saying that we want to find data that is today or in the future and has active status
 eventSchema.statics.getUpcoming = function() {
     return this.find({
         date: { $gte: new Date() },
-        isActive: true
+        status: 'active'
     }).sort({ date: 1 })
 };
 
-//finds events that have passed and sorts by descending order
+//finds past events with active status and sorts by descending order
 eventSchema.statics.getPast = function() {
     return this.find({ 
         date: { $lt: new Date() },
-        isActive: true 
+        status: 'active'
     }).sort({ date: -1 });
+};
+
+// Static method to get all active events
+eventSchema.statics.getActive = function() {
+    return this.find({ status: 'active' }).sort({ date: 1 });
 };
 
 const Event = mongoose.model('Event', eventSchema);

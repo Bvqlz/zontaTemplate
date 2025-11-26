@@ -137,14 +137,15 @@ const Shop = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen bg-gray-50 pt-32 pb-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                        Zonta Shop
+                    <h1 className="text-4xl md:text-5xl font-bold text-zonta-burgundy mb-4">
+                        Shop
                     </h1>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                    <div className="w-24 h-1 bg-zonta-gold mx-auto mb-6"></div>
+                    <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                         Support our mission by purchasing Zonta merchandise. All proceeds benefit our programs.
                     </p>
                 </div>

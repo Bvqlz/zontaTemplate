@@ -16,7 +16,7 @@ export default function Navbar() {
               src={zontaLogo}
               alt="Zonta Club of Naples logo"
               className="h-14 md:h-16"
-            />
+            /> 
           </Link>
 
           {/* Desktop Navigation */}
@@ -43,27 +43,17 @@ export default function Navbar() {
             </li>
             <li>
               <Link to="/scholarship" className="hover:text-zonta-gold transition-colors duration-300">
-                SCHOLARSHIP
-              </Link>
-            </li>
-            <li>
-              <Link to="/join" className="hover:text-zonta-gold transition-colors duration-300">
-                JOIN US
-              </Link>
-            </li>
-            <li>
-              <Link to="/faq" className="hover:text-zonta-gold transition-colors duration-300">
-                FAQ
-              </Link>
-            </li>
-            <li>
-              <Link to="/contact" className="hover:text-zonta-gold transition-colors duration-300">
-                CONTACT
+                SCHOLARSHIPS
               </Link>
             </li>
             <li>
               <Link to="/shop" className="hover:text-zonta-gold transition-colors duration-300">
                 SHOP
+              </Link>
+            </li>
+            <li>
+              <Link to="/join" className="hover:text-zonta-gold transition-colors duration-300">
+                MEMBERSHIP
               </Link>
             </li>
           </ul>

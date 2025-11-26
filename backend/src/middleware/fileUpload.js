@@ -86,6 +86,33 @@ const productImageUpload = multer({
 
 export const uploadProductImage = productImageUpload.single('image');
 
+// Separate storage configuration for event images
+const eventImageStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'zonta/events',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        resource_type: 'image',
+        transformation: [{ width: 800, height: 600, crop: 'limit', quality: 'auto' }],
+        public_id: (req, file) => {
+            const timestamp = Date.now();
+            const originalName = file.originalname.replace(/\.[^/.]+$/, '');
+            return `${originalName}-${timestamp}`;
+        }
+    }
+});
+
+const eventImageUpload = multer({
+    storage: eventImageStorage,
+    fileFilter: imageFileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5 MB limit
+        files: 1 // Single image for event
+    }
+});
+
+export const uploadEventImage = eventImageUpload.single('image');
+
 // Middleware for scholarship listings - handles both image and optional attachment
 // Use dynamic params function to handle different file types
 const scholarshipListingStorage = new CloudinaryStorage({

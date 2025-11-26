@@ -1,10 +1,11 @@
 import { sendScholarshipApplicationEmail } from '../utils/emailService.js';
 import Scholarship from '../models/scholarship.js';
+import ScholarshipListing from '../models/scholarshipListing.js';
 import cloudinary from '../config/cloudinary.js';
 
 export const submitScholarshipApplication = async (req, res, next) => {
     try {
-        const { firstName, lastName, email, phone } = req.body;
+        const { firstName, lastName, email, phone, scholarshipListingId } = req.body;
 
         // uploaded files are accessed
         // since the request is a multipart/form-data, multer middleware processes the files before this controller
@@ -16,6 +17,13 @@ export const submitScholarshipApplication = async (req, res, next) => {
             return res.status(400).json({
                 success: false,
                 error: 'At least one file (transcript or recommendation letter) must be uploaded.'
+            });
+        }
+
+        if (!scholarshipListingId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Scholarship selection is required.'
             });
         }
 
@@ -38,8 +46,18 @@ export const submitScholarshipApplication = async (req, res, next) => {
             mimetype: file.mimetype
         }));
 
+        // Fetch the scholarship listing to get the title
+        const scholarshipListing = await ScholarshipListing.findById(scholarshipListingId);
+        if (!scholarshipListing) {
+            return res.status(404).json({
+                success: false,
+                error: 'Scholarship listing not found'
+            });
+        }
+
         // creates new scholarship application record in the database
         const scholarship = await Scholarship.create({
+            scholarshipListingId,
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             email: email.trim().toLowerCase(),
@@ -52,7 +70,8 @@ export const submitScholarshipApplication = async (req, res, next) => {
             firstName: scholarship.firstName,
             lastName: scholarship.lastName,
             email: scholarship.email,
-            phone: scholarship.phone
+            phone: scholarship.phone,
+            scholarshipTitle: scholarshipListing.title
         };
 
         // Send email notification
@@ -106,7 +125,10 @@ export const getAllScholarships = async (req, res, next) => {
             query.status = status;
         }
 
-        const scholarships = await Scholarship.find(query).sort({ submittedAt: -1 }).select('-documents.path -__v');
+        const scholarships = await Scholarship.find(query)
+            .populate('scholarshipListingId', 'title deadline amount')
+            .sort({ submittedAt: -1 })
+            .select('-documents.path -__v');
 
         res.json({
             success: true,
@@ -122,7 +144,8 @@ export const getAllScholarships = async (req, res, next) => {
 // this function gets a single scholarship application by its ID for viewing on the admin dashboard
 export const getScholarship = async (req, res, next) => {
     try {
-        const scholarship = await Scholarship.findById(req.params.id);
+        const scholarship = await Scholarship.findById(req.params.id)
+            .populate('scholarshipListingId', 'title deadline amount description');
 
         if(!scholarship) {
             return res.status(404).json({

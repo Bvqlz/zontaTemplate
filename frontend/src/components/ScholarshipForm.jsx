@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { scholarshipAPI } from '../utils/apiService';
+import { useState, useEffect } from 'react';
+import { scholarshipAPI, scholarshipListingAPI } from '../utils/apiService';
 
 function ScholarshipForm({ scholarshipId }) {
     const [formData, setFormData] = useState({
@@ -14,6 +14,26 @@ function ScholarshipForm({ scholarshipId }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
+    const [scholarships, setScholarships] = useState([]);
+    const [loadingScholarships, setLoadingScholarships] = useState(true);
+
+    // Fetch active scholarships on component mount
+    useEffect(() => {
+        const fetchScholarships = async () => {
+            try {
+                setLoadingScholarships(true);
+                const response = await scholarshipListingAPI.getAllListings('active');
+                setScholarships(response.data || []);
+            } catch (err) {
+                console.error('Error fetching scholarships:', err);
+                setError('Failed to load scholarships. Please refresh the page.');
+            } finally {
+                setLoadingScholarships(false);
+            }
+        };
+
+        fetchScholarships();
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -27,7 +47,7 @@ function ScholarshipForm({ scholarshipId }) {
         const selectedFiles = Array.from(e.target.files);
         
         // Validate file count (including existing files)
-        if (files.length + selectedFiles.length > 2) {
+        if (files.length + selectedFiles.length > 3) {
             setError('Maximum 2 files allowed');
             return;
         }
@@ -81,6 +101,11 @@ function ScholarshipForm({ scholarshipId }) {
             data.append('email', formData.email);
             data.append('phone', formData.phone);
             
+            // Add scholarship listing ID if selected
+            if (formData.scholarshipListingId) {
+                data.append('scholarshipListingId', formData.scholarshipListingId);
+            }
+            
             // Append files
             files.forEach(file => {
                 data.append('documents', file);
@@ -115,7 +140,7 @@ function ScholarshipForm({ scholarshipId }) {
         }
     };
 
-    const handleDownloadForm = async () => {
+    const _handleDownloadForm = async () => {
         try {
             const blob = await scholarshipAPI.downloadForm();
             
@@ -147,20 +172,11 @@ function ScholarshipForm({ scholarshipId }) {
                         Application Instructions
                     </h3>
                     <ol className="list-decimal list-inside space-y-2 text-gray-700 mb-4">
-                        <li>Download and complete the scholarship application form</li>
+                        <li>Download the application details and complete the respective scholarship application form</li>
                         <li>Upload the completed form along with supporting documents</li>
-                        <li>Maximum 2 files (PDF, DOC, or DOCX)</li>
+                        <li>Maximum 3 files (PDF, DOC, or DOCX)</li>
                         <li>Each file must be less than 5MB</li>
                     </ol>
-                    <button
-                        onClick={handleDownloadForm}
-                        className="bg-zonta-burgundy text-white px-6 py-3 rounded-lg font-semibold hover:bg-zonta-burgundy-dark transition-colors duration-300 shadow-lg hover:shadow-xl flex items-center"
-                    >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Download Application Form
-                    </button>
                 </div>
 
                 {success && (
@@ -186,6 +202,38 @@ function ScholarshipForm({ scholarshipId }) {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Scholarship Selector */}
+                    <div>
+                        <label htmlFor="scholarshipListingId" className="block text-sm font-semibold text-gray-700 mb-2">
+                            Select Scholarship *
+                        </label>
+                        {loadingScholarships ? (
+                            <div className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                                Loading scholarships...
+                            </div>
+                        ) : scholarships.length === 0 ? (
+                            <div className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-yellow-50 text-yellow-700">
+                                No active scholarships available at this time.
+                            </div>
+                        ) : (
+                            <select
+                                id="scholarshipListingId"
+                                name="scholarshipListingId"
+                                value={formData.scholarshipListingId}
+                                onChange={handleChange}
+                                required
+                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-zonta-burgundy transition-colors bg-white"
+                            >
+                                <option value="">-- Select a scholarship --</option>
+                                {scholarships.map((scholarship) => (
+                                    <option key={scholarship._id} value={scholarship._id}>
+                                        {scholarship.title}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="firstName" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -251,7 +299,7 @@ function ScholarshipForm({ scholarshipId }) {
 
                     <div>
                         <label htmlFor="documents" className="block text-sm font-semibold text-gray-700 mb-2">
-                            Upload Documents * (Max 2 files, 5MB each)
+                            Upload Documents * (Max 3 files, 5MB each)
                         </label>
                         <input
                             type="file"

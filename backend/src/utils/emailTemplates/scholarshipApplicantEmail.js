@@ -1,5 +1,5 @@
 export const scholarshipApplicantEmailTemplate = (applicationData, files = []) => {
-    const { firstName, lastName, email } = applicationData;
+    const { firstName, lastName, email, scholarshipTitle } = applicationData;
     
     return `
         <!DOCTYPE html>
@@ -20,7 +20,7 @@ export const scholarshipApplicantEmailTemplate = (applicationData, files = []) =
                                         Application Received!
                                     </h1>
                                     <p style="color: #f0d4dc; margin: 10px 0 0 0; font-size: 14px;">
-                                        Scholarship Program - Zonta Club of Naples
+                                        Zonta Club of Naples
                                     </p>
                                 </td>
                             </tr>
@@ -33,7 +33,7 @@ export const scholarshipApplicantEmailTemplate = (applicationData, files = []) =
                                     </p>
                                     
                                     <p style="color: #555; font-size: 15px; line-height: 1.7; margin: 0 0 30px 0;">
-                                        Thank you for applying for the <strong>Zonta Club of Naples Scholarship</strong>! We have successfully received your application and all supporting documents. Your ambition and dedication to education inspire us.
+                                        Thank you for applying for the <strong>${scholarshipTitle || 'Zonta Club of Naples Scholarship'}</strong>! We have successfully received your application and all supporting documents. Your ambition and dedication to education inspire us.
                                     </p>
 
                                     <!-- Confirmation Card -->
@@ -42,6 +42,16 @@ export const scholarshipApplicantEmailTemplate = (applicationData, files = []) =
                                             Submission Confirmed
                                         </h3>
                                         <table cellpadding="5" cellspacing="0" border="0" width="100%">
+                                            ${scholarshipTitle ? `
+                                            <tr>
+                                                <td style="color: #155724; font-size: 13px; padding: 4px 0;">
+                                                    <strong>Scholarship:</strong>
+                                                </td>
+                                                <td style="color: #155724; font-size: 13px; padding: 4px 0;">
+                                                    ${scholarshipTitle}
+                                                </td>
+                                            </tr>
+                                            ` : ''}
                                             <tr>
                                                 <td style="color: #155724; font-size: 13px; padding: 4px 0;">
                                                     <strong>Applicant:</strong>
@@ -151,7 +161,7 @@ export const scholarshipApplicantEmailTemplate = (applicationData, files = []) =
                                     
                                     <p style="color: #333; font-size: 15px; margin: 25px 0 0 0;">
                                         Best wishes,<br>
-                                        <strong style="color: #8B1538;">The Zonta Club of Naples Scholarship Committee</strong>
+                                        <strong style="color: #8B1538;">The Zonta Club of Naples</strong>
                                     </p>
                                 </td>
                             </tr>

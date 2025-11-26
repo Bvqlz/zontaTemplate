@@ -15,6 +15,8 @@ function EventsList() {
         
         try {
             const filters = filter ? { type: filter } : {};
+            // Only show active events
+            filters.status = 'active';
             const result = await eventAPI.getAllEvents(filters);
             setEvents(result.data || []);
         } catch (err) {
@@ -61,18 +63,18 @@ function EventsList() {
     }
 
     return (
-        <div className="container-custom p-6">
-            <div className="mb-12">
-                <div className="text-center mb-8">
-                    <h2 className="text-4xl font-bold text-zonta-burgundy mb-4">Upcoming Events</h2>
-                    <div className="w-24 h-1 bg-zonta-gold mx-auto mb-6"></div>
-                    <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-                        Join us for meaningful events that make a difference in our community
-                    </p>
-                </div>
-                
-                {/* Filter buttons */}
-                <div className="flex flex-wrap justify-center gap-3">
+        <div className="container-custom">
+            {/* Header */}
+            <div className="text-center mb-12">
+                <h2 className="text-4xl md:text-5xl font-bold text-zonta-burgundy mb-4">Upcoming Events</h2>
+                <div className="w-24 h-1 bg-zonta-gold mx-auto mb-6"></div>
+                <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Join us for meaningful events that make a difference in our community
+                </p>
+            </div>
+            
+            {/* Filter buttons */}
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
                     <button
                         onClick={() => setFilter('')}
                         className={`px-6 py-2 rounded-full font-semibold transition-all duration-300 ${
@@ -123,7 +125,6 @@ function EventsList() {
                     >
                         Service
                     </button>
-                </div>
             </div>
 
             {events.length === 0 ? (

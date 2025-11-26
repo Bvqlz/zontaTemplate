@@ -1,10 +1,11 @@
 import Event from '../models/event.js';
 import { EVENT_TYPES } from '../models/event.js';
+import cloudinary from '../config/cloudinary.js';
 
 
 export const getEvents = async (req, res, next) => {
     try {
-        const { type, upcoming } = req.query;
+        const { type, upcoming, status } = req.query;
         
         //a isActive means that the even is not cancelled or deleted
         //an attribute that is apart of the event schema
@@ -15,7 +16,14 @@ export const getEvents = async (req, res, next) => {
             query.type = type;
         }
 
+        // Filter by status if provided
+        if(status && ['upcoming', 'past', 'cancelled'].includes(status)) {
+            query.status = status;
+        }
+
+        // Legacy support: if upcoming=true, filter by status='upcoming'
         if(upcoming === 'true') {
+            query.status = 'upcoming';
             query.date = { $gte: new Date() }; // remember that $gte means greater than or equal to
         }
 
@@ -75,10 +83,30 @@ export const getEvent = async (req, res, next) => {
 
 export const createNewEvent = async (req, res, next) => {
     try {
-        // dont think an event should have an attribute for createdBy. will remove later
-        const eventData = { ...req.body,
-             createdBy: req.admin?.email || 'admin'
-         };
+        console.log('Creating event - req.body:', req.body);
+        console.log('Creating event - req.file:', req.file);
+        
+        const eventData = { ...req.body };
+
+        // Handle image upload if file is provided
+        // The file is already uploaded to Cloudinary by the uploadEventImage middleware
+        if (req.file) {
+            console.log('File uploaded to Cloudinary:', {
+                path: req.file.path,
+                filename: req.file.filename
+            });
+            
+            eventData.image = {
+                url: req.file.path,
+                publicId: req.file.filename,
+                alt: eventData.title || 'Event image'
+            };
+
+            // Keep imageUrl for backward compatibility
+            eventData.imageUrl = req.file.path;
+        } else {
+            console.log('No file received in request');
+        }
 
          // once the response body has been validated we create the event in the database
          const event = await Event.create(eventData);
@@ -118,9 +146,33 @@ export const updateExistingEvent = async (req, res, next) => {
             });
         }
 
+        // Handle new image upload
+        if (req.file) {
+            // Delete old image from Cloudinary if it exists
+            if (event.image && event.image.publicId) {
+                try {
+                    await cloudinary.uploader.destroy(event.image.publicId);
+                } catch (deleteError) {
+                    console.error('Error deleting old image:', deleteError);
+                }
+            }
+
+            // The file is already uploaded to Cloudinary by the uploadEventImage middleware
+            event.image = {
+                url: req.file.path,
+                publicId: req.file.filename,
+                alt: req.body.title || event.title || 'Event image'
+            };
+
+            // Keep imageUrl for backward compatibility
+            event.imageUrl = req.file.path;
+        }
+
         // we look at each key in the request body and update the event object accordingly
         Object.keys(req.body).forEach(key => {
-            event[key] = req.body[key];
+            if (key !== 'image') { // Skip image key as we handled it above
+                event[key] = req.body[key];
+            }
         });
 
         await event.save(); // we update this record in the database

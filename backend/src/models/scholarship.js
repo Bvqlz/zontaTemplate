@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 
 const scholarshipSchema = new mongoose.Schema({
+    scholarshipListingId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ScholarshipListing',
+        required: [true, 'Scholarship listing reference is required'],
+        index: true
+    },
     firstName: {
         type: String,
         required: [true, 'First name is required'],
