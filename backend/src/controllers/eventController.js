@@ -1,6 +1,7 @@
 import Event from '../models/event.js';
 import { EVENT_TYPES } from '../models/event.js';
 import cloudinary from '../config/cloudinary.js';
+import { sendEventRsvpConfirmation } from '../utils/emailService.js';
 
 
 export const getEvents = async (req, res, next) => {
@@ -229,6 +230,136 @@ export const deleteExistingEvent = async (req, res, next) => {
         next(error);
     }
 }
+
+// RSVP to an event
+export const rsvpToEvent = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        const eventId = req.params.id;
+
+        // Validate input
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email is required'
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid email format'
+            });
+        }
+
+        // Find event
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                error: 'Event not found'
+            });
+        }
+
+        // Check if event is in the past
+        if (event.date < new Date()) {
+            return res.status(400).json({
+                success: false,
+                error: 'Cannot RSVP to past events'
+            });
+        }
+
+        // Check if event is active
+        if (event.status !== 'active') {
+            return res.status(400).json({
+                success: false,
+                error: 'Event is not accepting RSVPs at this time'
+            });
+        }
+
+        // Check if email already registered
+        const existingRsvp = event.rsvps.find(
+            rsvp => rsvp.email.toLowerCase() === email.toLowerCase()
+        );
+
+        if (existingRsvp) {
+            return res.status(400).json({
+                success: false,
+                error: 'You have already registered for this event'
+            });
+        }
+
+        // Check max attendees if set
+        if (event.maxAttendees && event.rsvps.length >= event.maxAttendees) {
+            return res.status(400).json({
+                success: false,
+                error: 'This event is at full capacity'
+            });
+        }
+
+        // Add RSVP
+        event.rsvps.push({
+            email: email.toLowerCase(),
+            rsvpDate: new Date(),
+            reminderSent: false
+        });
+
+        await event.save();
+
+        // Send confirmation email
+        try {
+            await sendEventRsvpConfirmation(event, email);
+        } catch (emailError) {
+            console.error('Failed to send RSVP confirmation email:', emailError);
+            // Don't fail the RSVP if email fails
+        }
+
+        res.json({
+            success: true,
+            message: 'RSVP successful! Check your email for confirmation.',
+            data: {
+                eventTitle: event.title,
+                eventDate: event.date,
+                totalRsvps: event.rsvps.length
+            }
+        });
+
+        console.log(`RSVP added for ${email} to event: ${event.title}`);
+    } catch (error) {
+        console.error('Error processing RSVP:', error);
+        next(error);
+    }
+};
+
+// Get RSVP list for an event (admin only)
+export const getEventRsvps = async (req, res, next) => {
+    try {
+        const event = await Event.findById(req.params.id).select('title date location rsvps');
+        
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                error: 'Event not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                eventTitle: event.title,
+                eventDate: event.date,
+                eventLocation: event.location,
+                totalRsvps: event.rsvps.length,
+                rsvps: event.rsvps.sort((a, b) => b.rsvpDate - a.rsvpDate)
+            }
+        });
+    } catch (error) {
+        console.error('Error retrieving RSVPs:', error);
+        next(error);
+    }
+};
 
 // deprecated test endpoint to verify event API is working
 export const testEventEndpoint = (req, res) => {

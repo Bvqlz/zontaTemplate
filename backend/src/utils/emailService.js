@@ -2,8 +2,12 @@
 import dotenv from 'dotenv';
 import { membershipAdminEmailTemplate } from './emailTemplates/membershipAdminEmail.js';
 import { membershipApplicantEmailTemplate } from './emailTemplates/membershipApplicantEmail.js';
+import { membershipApprovalEmailTemplate } from './emailTemplates/membershipApprovalEmail.js';
+import { membershipRenewalReminderTemplate } from './emailTemplates/membershipRenewalEmail.js';
 import { scholarshipAdminEmailTemplate } from './emailTemplates/scholarshipAdminEmail.js';
 import { scholarshipApplicantEmailTemplate } from './emailTemplates/scholarshipApplicantEmail.js';
+import { eventRsvpConfirmationEmail } from './emailTemplates/eventRsvpConfirmationEmail.js';
+import { eventReminderEmail } from './emailTemplates/eventReminderEmail.js';
 
 dotenv.config();
 
@@ -68,6 +72,78 @@ export const sendScholarshipApplicationEmail = async (applicationData, files = [
     } catch (error) {
         console.error('Error sending scholarship:', error);
         throw new Error('Failed to send email');
+    }
+};
+
+// Send membership approval email with payment link
+export const sendMembershipApprovalEmail = async (member, paymentUrl) => {
+    const mailOptions = {
+        from: process.env.EMAIL_FROM,
+        to: member.email,
+        subject: '🎉 Membership Approved - Complete Your Payment',
+        html: membershipApprovalEmailTemplate(member, paymentUrl)
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Membership approval email sent to ${member.email}`);
+    } catch (error) {
+        console.error('Error sending membership approval email:', error);
+        throw new Error('Failed to send membership approval email');
+    }
+};
+
+// Send membership renewal reminder with payment link
+export const sendMembershipRenewalReminder = async (member, paymentUrl) => {
+    const mailOptions = {
+        from: process.env.EMAIL_FROM,
+        to: member.email,
+        subject: '⏰ Membership Renewal Reminder - Zonta Club of Naples',
+        html: membershipRenewalReminderTemplate(member, paymentUrl)
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Renewal reminder email sent to ${member.email}`);
+    } catch (error) {
+        console.error('Error sending renewal reminder email:', error);
+        throw new Error('Failed to send renewal reminder email');
+    }
+};
+
+// Send event RSVP confirmation email
+export const sendEventRsvpConfirmation = async (event, attendeeEmail) => {
+    const mailOptions = {
+        from: process.env.EMAIL_FROM,
+        to: attendeeEmail,
+        subject: `RSVP Confirmed: ${event.title}`,
+        html: eventRsvpConfirmationEmail(event, attendeeEmail)
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Event RSVP confirmation sent to ${attendeeEmail}`);
+    } catch (error) {
+        console.error('Error sending event RSVP confirmation:', error);
+        throw new Error('Failed to send event RSVP confirmation');
+    }
+};
+
+// Send event reminder email (24 hours before)
+export const sendEventReminder = async (event, attendeeEmail) => {
+    const mailOptions = {
+        from: process.env.EMAIL_FROM,
+        to: attendeeEmail,
+        subject: `Reminder: ${event.title} - Tomorrow!`,
+        html: eventReminderEmail(event, attendeeEmail)
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Event reminder sent to ${attendeeEmail}`);
+    } catch (error) {
+        console.error('Error sending event reminder:', error);
+        throw new Error('Failed to send event reminder');
     }
 };
 

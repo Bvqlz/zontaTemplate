@@ -1,5 +1,8 @@
-import { sendMemberShipApplicationEmail } from "../utils/emailService.js";
+import { sendMemberShipApplicationEmail, sendMembershipApprovalEmail } from "../utils/emailService.js";
 import Member from '../models/Member.js';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const submitMembershipApplication = async (req, res, next) => {
     try {
@@ -142,10 +145,54 @@ export const updateMember = async (req, res, next) => {
             });
         }
         
+        const previousStatus = member.status;
+        
         //update fields by checking if they were provided in the request body
         //if they exist then we can assign them to the member object
         if(status) member.status = status;
         if(notes) member.notes = notes;
+
+        // If status changed to 'approved', create payment checkout and send email
+        if (status === 'approved' && previousStatus !== 'approved' && !member.membershipPaid) {
+            try {
+                // Create Stripe checkout session for initial membership payment
+                const session = await stripe.checkout.sessions.create({
+                    payment_method_types: ['card'],
+                    line_items: [{
+                        price_data: {
+                            currency: 'usd',
+                            product_data: {
+                                name: 'Zonta Club Membership',
+                                description: `${member.firstName} ${member.lastName} - Initial Membership Fee`,
+                            },
+                            unit_amount: 15000, // $150.00 in cents
+                        },
+                        quantity: 1,
+                    }],
+                    mode: 'payment',
+                    customer_email: member.email,
+                    client_reference_id: member._id.toString(),
+                    metadata: {
+                        memberId: member._id.toString(),
+                        memberEmail: member.email,
+                        memberName: `${member.firstName} ${member.lastName}`,
+                        paymentType: 'initial'
+                    },
+                    success_url: `${process.env.FRONTEND_URL}/membership/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: `${process.env.FRONTEND_URL}/membership/payment-cancelled`,
+                });
+
+                member.pendingStripeSessionId = session.id;
+
+                // Send approval email with payment link
+                await sendMembershipApprovalEmail(member, session.url);
+                
+                console.log(`Approval email with payment link sent to ${member.email}`);
+            } catch (emailError) {
+                console.error('Error sending approval email:', emailError);
+                // Don't fail the whole operation if email fails
+            }
+        }
 
         await member.save(); // save the updated member record
 

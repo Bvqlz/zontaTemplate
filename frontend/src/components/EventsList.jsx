@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { eventAPI } from '../utils/apiService';
+import EventRsvpButton from './EventRsvpForm';
 
 // this events page would be an example of using the eventAPI to get events from the backend
 
@@ -191,6 +192,15 @@ function EventsList() {
                                             <span>Max {event.maxAttendees} attendees</span>
                                         </div>
                                     )}
+                                </div>
+
+                                {/* RSVP Button */}
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                    <EventRsvpButton 
+                                        eventId={event._id}
+                                        eventTitle={event.title}
+                                        onRsvpSuccess={() => fetchEvents()}
+                                    />
                                 </div>
                             </div>
                         </div>

@@ -27,6 +27,7 @@ import DonateSuccess from "./pages/DonateSuccess.jsx";
 import Shop from "./pages/Shop.jsx";
 import ProductCheckout from "./pages/ProductCheckout.jsx";
 import ShopSuccess from "./pages/ShopSuccess.jsx";
+import MembershipPaymentSuccess from "./pages/MembershipPaymentSuccess.jsx";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
@@ -65,6 +66,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/shop" element={<Shop />} />
           <Route path="/shop/checkout/:id" element={<ProductCheckout />} />
           <Route path="/shop/success" element={<ShopSuccess />} />
+          <Route path="/membership/payment-success" element={<MembershipPaymentSuccess />} />
         </Route>
 
         {/* Hidden Admin Login - no navbar/footer */}

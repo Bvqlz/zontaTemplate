@@ -327,6 +327,9 @@ export const createProductCheckout = async (req, res) => {
                     quantity: quantity
                 }
             ],
+            payment_intent_data: {
+                receipt_email: customerEmail,
+            },
             success_url: `${process.env.FRONTEND_URL}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.FRONTEND_URL}/shop?canceled=true&order_id=${order._id}`,
             metadata: {

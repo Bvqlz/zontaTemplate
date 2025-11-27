@@ -69,7 +69,23 @@ const eventSchema = new mongoose.Schema({
         type: String,
         enum: ['active', 'draft', 'archived'],
         default: 'draft'
-    }
+    },
+    rsvps: [{
+        email: {
+            type: String,
+            required: true,
+            lowercase: true,
+            trim: true
+        },
+        rsvpDate: {
+            type: Date,
+            default: Date.now
+        },
+        reminderSent: {
+            type: Boolean,
+            default: false
+        }
+    }]
 }, { timestamps: true });
 
 eventSchema.index({ data: 1 }); //ascending order

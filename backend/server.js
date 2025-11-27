@@ -7,7 +7,9 @@ import scholarshipListingRoutes from './src/routes/scholarshipListings.js';
 import authRoutes from './src/routes/auth.js';
 import donationRoutes, { handleWebhook } from './src/routes/donations.js';
 import productRoutes, { handleProductWebhook } from './src/routes/products.js';
+import membershipPaymentRoutes, { handleMembershipWebhook } from './src/routes/membershipPayments.js';
 import { connectDB } from './src/config/database.js';
+import { startMembershipRenewalScheduler, startEventReminderScheduler } from './src/utils/scheduler.js';
 
 connectDB();
 const app = express();
@@ -24,10 +26,12 @@ const corsOptions = {
 // Apply CORS to webhook routes first, then raw body parser
 app.use('/api/donations/webhook', cors(), express.raw({ type: 'application/json' }));
 app.use('/api/products/webhook', cors(), express.raw({ type: 'application/json' }));
+app.use('/api/membership-payments/webhook', cors(), express.raw({ type: 'application/json' }));
 
 // Register webhook routes
 app.post('/api/donations/webhook', handleWebhook);
 app.post('/api/products/webhook', handleProductWebhook);
+app.post('/api/membership-payments/webhook', handleMembershipWebhook);
 
 // CORS and body parsing for all other routes
 app.use(cors(corsOptions));
@@ -79,6 +83,8 @@ app.use('/api/donations', donationRoutes);
 
 app.use('/api/products', productRoutes);
 
+app.use('/api/membership-payments', membershipPaymentRoutes);
+
 app.use((req, res) => {
     res.status(404).json({ 
         error: 'Route not found',
@@ -107,6 +113,10 @@ const server = app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
     console.log(`Email configured: ${process.env.EMAIL_USER}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Start schedulers
+    startMembershipRenewalScheduler();
+    startEventReminderScheduler();
 });
 
 const gracefulShutdown = async (signal) => {
@@ -138,7 +148,7 @@ process.on('unhandledRejection', (reason, promise) => {
     process.exit(1);
 });
 
-//need to run .\stripe listen --forward-to localhost:3000/api/donations/webhook --forward-to localhost:3000/api/products/webhook
+//need to run .\stripe listen --forward-to localhost:3000/api/donations/webhook --forward-to localhost:3000/api/products/webhook --forward-to localhost:3000/api/membership-payments/webhook
 //at the start of the server to test webhooks locally
 
 export default app;

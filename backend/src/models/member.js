@@ -33,8 +33,43 @@ const memberSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected'],
+        enum: ['pending', 'approved', 'rejected', 'active', 'expired'],
         default: 'pending'
+    },
+    // Payment tracking
+    membershipPaid: {
+        type: Boolean,
+        default: false
+    },
+    membershipStartDate: {
+        type: Date
+    },
+    membershipRenewalDate: {
+        type: Date
+    },
+    lastPaymentDate: {
+        type: Date
+    },
+    lastPaymentAmount: {
+        type: Number
+    },
+    paymentHistory: [{
+        amount: Number,
+        paymentDate: Date,
+        stripeSessionId: String,
+        type: {
+            type: String,
+            enum: ['initial', 'renewal'],
+            default: 'initial'
+        }
+    }],
+    // Stripe session for pending payment
+    pendingStripeSessionId: {
+        type: String
+    },
+    renewalReminderSent: {
+        type: Boolean,
+        default: false
     },
     submittedAt: {
         type: Date,
@@ -57,6 +92,6 @@ memberSchema.virtual('fullName').get(function() {
 memberSchema.set('toJSON', {virtuals: true });
 memberSchema.set('toObject', {virtuals: true });
 
-const Member = mongoose.model('Member', memberSchema);
+const Member = mongoose.models.Member || mongoose.model('Member', memberSchema);
 
 export default Member;
